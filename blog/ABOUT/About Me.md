@@ -1,5 +1,6 @@
 ## 作者的话
-这是我的 [**gitHub账号**](https://github.com/Zouyikang1995)
+这是我的 [**gitHub账号**](https://github.com/Zouyikang1995)。
+我的[**个人网页**](http://yikangzou.com/)，英文书写，用来更新重大事项。
    
 这个就是平时记笔记用的一个博客,希望成为我的一片宝藏。     
 尝试过个人网页，公众号，最终选择了这个极简的博客，便于更改，易于迭代。
