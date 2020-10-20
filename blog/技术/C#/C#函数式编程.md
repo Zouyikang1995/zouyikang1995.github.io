@@ -1,0 +1,135 @@
+# C#函数式编程
+## 介绍
+### 定义
+Definition: It is a programming paradigm originated from ideas older than the first computers when two mathematicians introduced a theory called lambda calculus. It provided a theoretical framework that treated computation as an evaluation of mathematical functions by evaluating expressions rather than execution of commands and avoiding changing-state and mutating data.        
+定义：函数式编程(functional programming)或称函数程序设计，又称泛函编程，是一种编程模型，他将计算机运算看做是数学中函数的计算，并且避免了状态以及变量的概念。函数编程语言最重要的基础是λ(lambda calculus)。而且λ演算的函数可以接受函数当作输入(引数)和输出(传出值)。     
+### 特点
+比起指令式编程，函数式编程更加强调程序执行的结果而非执行的过程，倡导利用若干简单的执行单元让计算结果不断渐进，逐层推导复杂的运算，而不是设计一个复杂的执行过程。
+
+## 前置知识
+### 代理：将函数当作参数对待(Delegates:Treating Methods like Objects)
+#### 引入
+对于普通函数，我们可以传入各种基本类型的参数，包括int，string，boolean，list等等，然后得到返回值。不过我们考虑另外一种情况，如果我们在一个函数里面传入一个函数，而不是基本数据类型的参数，会是什么样的结果呢？C#提供了这种特性，叫做`代理`(delegate)，把函数当作一个参数传入另外一个函数可能看起来有点怪异，但是却又有很大的用途。
+#### 创建代理(Creating a Delegate)
+由于函数需要明确传入变量以及返回值的类型，因此代理(delegate)也受到相应的限制。我们可以这样说，只要函数的参数相同(包括参数类型和个数)，代理(delegate)可以执行这一类的函数。   
+例如，我们可以创建一个进行数学计算的代理(加减乘除等)，虽然具体操作处理不一样，但是都需要两个int的参数，然后返回一个int值。    
+```c#
+public delegate int MathDelegate(int a, int b);
+public static int Add(int a, int b)
+{
+    return a + b;
+}
+public static int Subtract(int a, int b)
+{
+    return a - b;
+}
+```
+#### 使用代理(Using Delegates)
+我们使用上述代理要满足一些条件：函数有2个int类型的传入参数，并且返回值类型为int。使用方法如下：
+```c#
+MathDelegate mathOperation = Add;
+int a = 5;
+int b = 7;
+int result = mathOperation(a, b);
+```
+#### Action代理
+Action将代理稍微封装了一下，返回值统一为空。传入变量为泛型，接收变量可以0到16个。
+```c#
+public delegate void Action();
+public delegate void Action<T>(T arg);
+public delegate void Action<T1, T2>(T1 arg1, T2 arg2);
+public delegate void Action<T1, T2, T3>(T1 arg1, T2 arg2, T3 arg3);
+```
+#### Func代理
+Func代理也是经过封装的代理，与Action不同的是，有一个泛型的返回值。其它与Action非常类似。   
+```c#
+public delegate TResult Func<TResult>();
+public delegate TResult Func<T, Result>(T arg);
+public delegate TResult Func<T1, T2, Result>(T1 arg1, T2 arg2);
+```
+因此，可以将上面的例子进行改写，引用Func代理，而不需要自己重写代理。
+```c#
+Func<int, int, int> mathOperation = Add;
+int a = 5;
+int b = 7;
+int result = mathOperation(a, b);
+```
+### 代理简化实例
+接下来，我们将利用代理引入一个实例。在这个实例中，为了优化代码的书写和阅读，我们需要了解匿名内部函数和lambda表达式的使用。      
+假如，有一个装有int数字的List序列，我们需要获得其中的偶数。我们可以写一个函数：     
+```c#
+public static bool IsEven(int number)
+{
+    return (number % 2 == 0);
+}
+```
+利用代理，我们可以使用Where代理函数。    
+```c#
+IEnumerable<int> evenNumbers = numbers.Where(IsEven);
+```
+这样的写法已经有了一定的阅读性，也比较简洁。但是考虑到更加简洁的写法和方便阅读，我们可以将两个合并在一行进行书写。这里要利用匿名内部函数。
+
+
+```c#
+numbers.Where(delegate(int number){ return (number % 2 == 0);});
+```
+### lambda表达式
+lambda表达式是一个方法。更精确地说，它是一个采用匿名内部方法，并且可读性更好的一种写法。例如判断是否为偶数的函数可以简单地写成： 
+```c#
+x => x % 2 == 0
+```
+进而，利用代理来判断偶数的例子可以进一步简化成为下面这样。十分简洁，并且可读性非常强。
+```c#
+IEnumerable<int> events = numbers.Where(x => x % 2 == 0);
+```
+## 常用函数
+### Where方法 => 相当于Java中Filter方法
+```c#
+List<int> list = new List<int>{ 0, 3, 4, 6, 8, 13, 32, 43};
+List.Where(x => x > 15).ToList();  // 32  43
+```
+### ForEach方法
+```c#
+List<int> list = new List<int>{ 0, 3, 4, 6, 8, 13, 32, 43};
+list.Where(x => x > 15).ToList().ForEach(x => Console.WriteLine(x));
+```
+> 结果：
+> 32
+> 43
+### Select方法 => 相当于Java中Map方法
+```c#
+list.Select(x => x.ToString()).ToArray();
+```
+> 结果：转换成字符数组，string[]{'0', '3', '4', '6', '8', '13', '32', '43'}
+### Aggregate => 相当于Java中Reduce方法
+是一种遍历的方法，使用如下：  
+```c#
+list.Aggregate((x,y) => x + y);
+```
+> 结果：103  相当于list.sum();
+### Count计数方法
+```c#
+list.Where(x => x > 15).Count();
+```
+> 结果：2
+### Sum求和方法
+```c#
+list.Where(x => x > 15).Sum();
+```
+> 结果：75
+### Average求平均数方法
+```c#
+list.Where(x => x > 15).Average();
+```
+> 结果：37.5
+### 其它函数
+`Distinct`,`OrderBy`,`GroupBy`
+### 注意事项
+#### 结果需转换存储的函数
+类似于Java函数编程里面的`流管道`，数据只能单向移动，操作并不能对原内容产生影响。在以上几个函数中，前三个函数`Where`,`ForEach`,`Select`也适用，意味着函数里面的操作不能对原来list里面的数据产生影响。如果想要获取处理后的结果，可以使用ToList()等方法吧处理的内容转化成新的list或者数组。其中`ForEach`由于返回值为空，又比较特殊，意味着不能通过别的方法来处理转化的结果。也就是在`ForEach`函数内。只能读，不能写(修改)。      
+例如，下面这样的写法，`并不能`改变list里面的值。
+```c#
+list.ForEach(x => x = x + 2);   //list依然是 { 0, 3, 4, 6, 8, 13, 32 ,43},结果不会变
+```
+需要注意的是，如果只是输出，下面这样的写法可以得到想要的结果。但是，也仅仅是`ForEach`函数里面的x的值发生了变化而已。也就是函数里面的临时变量发生了变化，但是并不会影响list里面的值。
+```c#
