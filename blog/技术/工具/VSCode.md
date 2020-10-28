@@ -13,3 +13,4 @@
     * 将The default end of line character改为`\n`    
 4. 按列选中：`Ctrl`+`Shift`+`Alt`+`[↑/↓]`
 5. 切换到侧边栏：`ctrl`+`b`(再按一次可隐藏)
+   侧边栏选择文件：`ctrl` + `shift` + `a`
