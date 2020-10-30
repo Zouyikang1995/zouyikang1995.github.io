@@ -31,7 +31,7 @@
 2. SQL关键字大写，表名、列名、查询内容等小写。
 3. 使用自然集合术语的复数形式来给表命名，例如employees；使用单数形式给列命名，例如employee。多个单词时避免使用驼峰命名法，用下划线连接，例如tb_employees。
 4. 在等号`=`前后，逗号`,`后，成对的单引号`'`前后加入空格。
-```c#
+```js
 (SELECT f.species_name,
         AVG(f.height) AS average_height, AVG(f.diameter) AS average_diameter
    FROM flora AS f
@@ -41,7 +41,6 @@
   GROUP BY f.species_name, f.observation_date)
 
   UNION ALL
-
 (SELECT b.species_name,
         AVG(b.height) AS average_height, AVG(b.diameter) AS average_diameter
    FROM botanic_garden_flora AS b
@@ -51,7 +50,7 @@
   GROUP BY b.species_name, b.observation_date);
 ```
 5. Joins语句以及Subqueries子查询语句注意缩进对齐，并且在必要时添加换行。
-```c#
+```js
 SELECT r.last_name
   FROM riders AS r
        INNER JOIN bikes AS b
@@ -63,7 +62,7 @@ SELECT r.last_name
           AND c.chief = 'Y';
 ```
 *****
-```c#
+```js
 SELECT r.last_name,
        (SELECT MAX(YEAR(championship_date))
           FROM champions AS c
@@ -77,7 +76,7 @@ SELECT r.last_name,
            AND c.confirmed = 'Y');
 ```
 6. 创建表格时注意缩进对齐，列名进行一次缩进，列名约束进行二次缩进。
-```c#
+```js
 CREATE TABLE staff (
     PRIMARY KEY (staff_num),
     staff_num      INT(5)       NOT NULL,
@@ -89,7 +88,7 @@ CREATE TABLE staff (
 ```
 ## 创建表 Create Table
 ### SQL CREATE TABLE语法
-```c#
+```js
 CREATE TABLE table_name
 (
     column_name1 data_type(size),
@@ -98,6 +97,7 @@ CREATE TABLE table_name
     ....
 );
 ```
+
 *语法参数的含义*
 
 | 参数 | 含义 |
