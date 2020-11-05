@@ -118,6 +118,100 @@ CREATE TABLE table_name
 
 ### 查找 Select
 
+
+## Oracle对象(Object)
+1. `VIEW`
+CREATE语法：
+```
+CREATE [OR REPLACE] [FORCE|NOFORCE] VIEW　<ビュー名>
+  AS <SELECT文> [WITH READ ONLY] [WITH CHECK OPTION];
+```
+
+| 参数 |	説明 |
+| :-- | :-- |
+| OR REPLACE |	同名のビューが既に存在した時でも、構わず上書きする場合に指定する |
+| FORCE | FORCE：エラーがあっても強制的にVIEWを作成する |   
+| NOFORCE | NOFORCE：エラーがあった場合はVIEWを作成しない |
+| WITH READ ONLY | 読み取り専用のVIEWを作成する |
+| WITH CHECK OPTION | VIEWにより問い合わされた行に対してのみ、ビューを通して挿入や更新を可能とする場合に指定する |
+
+2. `INDEX`   
+CREATE INDEX语法说明：
+```
+CREATE [UNIQUE | BITMAP] INDEX <インデックス名>
+  ON <テーブル名>(列名 [ASC|DESC],...)
+  [TABLESPACE 表領域名];
+```
+
+| 参数 |	説明 |
+| :-- | :-- |
+| UNIQUE | 通常のINDEXを作成する |
+| BITMAP | BITMAP INDEXを作成する |
+| TABLESPACE | INDEXを作成する表領域を指定する |
+
+3. `SEQUENCE`
+CREATE SEQUENCE语法说明：
+
+```
+CREATE [OR REPLACE] SEQUENCE 順序名
+  [ START WITH 初期値 ]
+  [ INCREMENT BY 増分値 ]
+  [ MAXVALUE 最大値 | NOMAXVALUE ]
+  [ MINVALUE 最小値 | NOMINVALUE ]
+  [ CYCLE | NOCYCLE ]
+  [ CACHE キャッシュ数 | NOCYCLE ]
+;
+```
+
+| パラメータ | 説明 |
+| :-- | :-- |
+| OR REPLACE | 同名のシーケンスが既に存在した時でも、構わず上書きする場合に指定する |
+| START WITH | 初期値の設定  ここで設定した値から采番が開始する |
+| INCREMENT BY |	増分の設定  ここで指定した数だけ増えていく |
+| MAXVALUE 最大値 / NOMAXVALUE | インクリメントする最大値の設定  NOMAXVALUEを設定すると最大値はナシ。 |
+| MINVALUE 最小値 / NOMINVALUE |	増分がマイナスの時の最小値の設定   NOMINVALUEを設定すると最小値はナシ。 |
+| CYCLE / NOCYCLE | 最大値に達したときにシーケンスをループするかしないかの設定 |
+| CACHE キャッシュ数 / NOCACHE |	シーケンスに高速にアクセスするために、メモリー上に値を保持しておく場合に指定する。（デフォルト値は、キャッシュ数＝20） |
+
+4. `TRIGGER`   
+CREATE TRIGGER语法说明：
+
+```
+CREATE [ OR REPLACE ] TRIGGER トリガー名
+  { BEFORE | AFTER | INSTEAD OF }
+  { INSERT | UPDATE [OF 列名,...] | DELETE }
+    [OR {INSERT | UPDATE [OF 列名,...] | DELETE }]
+    [... ]
+      ON テーブル名
+    [ FOR EACH ROW ]
+    [ WHEN 条件式 ]
+      BEGIN
+        処理内容
+    END
+;
+```
+
+| 参数 |	说明 |
+| OR REPLACE |	同じ名前のトリガーがあった場合は上書きする指定。 |
+| BEFORE / AFTER / INSTEAD OF | トリガーを起動させるタイミング。 |
+| BEFORE | before：データが操作される前にトリガーを起動する |
+| AFTER | after：データが操作された後にトリガーを起動する |
+| INSTEAD OF | instead of：データが操作されるSQLが実行された時、そのSQLは実行せずにトリガーだけを起動する |
+| FOR EACH ROW | 複数の行のデータが操作された場合、この指定があると、各行ごとにトリガーを起動する   この指定が無いと複数行のデータが操作されるSQLが発行されても１回しかトリガーは起動されない。 |
+
+
+5. `SYNONYM`
+CREATE SYNONYM语法说明：
+
+```
+CREATE [OR REPLACE] [PUBLIC] SYNONYM 別名
+  FOR スキーマ名.オブジェクト名;
+```
+
+| 参数 | 说明 |
+| OR REPLACE | 同名のシノニムが既に存在した時でも、構わず上書きする場合に指定する |
+| PUBLIC | パブリックシノニムを作成する場合に指定する。  （パブリックシノニムとは全てのユーザがアクセス可能なシノニムの事です。） |
+
 ## 参考资料
 [SQL CREATE TABLE语句](https://www.runoob.com/sql/sql-create-table.html)
 [Oracle创建空间和表](https://www.cnblogs.com/qmfsun/p/3817344.html)
