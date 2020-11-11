@@ -1,6 +1,6 @@
-## Visual Studio
+# Visual Studio
 
-### Visual Studio ShortCuts
+## Visual Studio ShortCuts
 1. 显示方法列表的窗口：`Ctrl`+`F2`,`Tab`两次
 2. 关闭output窗口：`Esc`+`Shift`
 3. Solution Explore：`Ctrl`+`Alt`+`L`  

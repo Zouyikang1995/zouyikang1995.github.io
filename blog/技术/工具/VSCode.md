@@ -1,6 +1,6 @@
-## Visual Studio Code
+# Visual Studio Code
 
-### Visual Studio Code ShortCuts   
+## Visual Studio Code ShortCuts   
 1. 设置VSCode切换Vim模式的快捷键。（例如：`Ctrl`+`;`）   
    * 进入键盘快捷键界面（`Ctrl`+`K`,`Ctrl`+`S`）   
    * 搜索Vim->找到Toggle Vim mode      
