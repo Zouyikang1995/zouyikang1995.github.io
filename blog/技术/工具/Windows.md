@@ -23,6 +23,10 @@
 4. 活动窗口截取：`Alt` + `PrintScreen`   
    * 优点：直接`按窗口截取`，不用剪裁。  
    * 缺点：按下快捷键没有反馈，需要打开`画图`进行粘贴，保存。   
+5. Chrome滑动截图
+   * 按下快捷键`Ctrl` + `Shift` + `I`，调出浏览器控制台                  
+   * 接着按下快捷键`Ctrl` + `Shift` + `P`，打开命令行                         
+   * 输入`screen`，选择“Capture full size screenshot”并回车（或直接用鼠标点击这个选项）。                     
 
 #### 桌面相关
 1. 新建桌面：`Window` + `Ctrl` + `D`          
