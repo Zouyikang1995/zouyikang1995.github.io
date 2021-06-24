@@ -9,3 +9,9 @@
 有志者事竟成，破釜沉舟百二秦关终属楚。     
 向远之航无惧，必将乘风破浪。      
 
+## About me   
+This is my [**gitHub**](https://github.com/Zouyikang1995).         
+And My [**Home page**](http://yikangzou.com/)，written by English，to describe some activities in my life.      
+
+This is a blog to write down some ideas about my life. I hope it will be a treasure in my future life.       
+I have tried to develop my own website, WeChat public account. But at last, I choose to use this simple blog because it is easy to modify.    
