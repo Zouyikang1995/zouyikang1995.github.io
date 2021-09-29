@@ -130,9 +130,8 @@ public static void main(String[] args) {
                         (Person person) -> {return  person.gender.equals(Gender.FEMALE);}
                 )
                 .forEach(System.out::println);
-
-
 ```
+
 * The second way to write in lambda expression.     
 ```java
 // Declarative approach 
@@ -141,8 +140,8 @@ people.stream()
                         (Person person) -> person.gender.equals(Gender.FEMALE)
                )
                 .forEach(System.out::println);
-
 ```
+
 * The third way to write in lambda expression.   
 ```java
 // Declarative approach
