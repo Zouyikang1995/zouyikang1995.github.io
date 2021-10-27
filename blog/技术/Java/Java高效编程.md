@@ -42,6 +42,16 @@ Data Source: [Difference Between Imperative and Declarative Programming](https:/
 2. `Function<T,R>`: Represents a function that accepts one argument and produces a result.  
    - T : the type of the input to the function   
    - R : the type of the result of the function    
+3. `BiFunction<T, U, R>`: Represents a function that accepts two arguments and produces a result. This is the two-arity specialization of Function.   
+   - T - the type of the first argument to the function  
+   - U - the type of the second argument to the function  
+   - R - the type of the result of the function   
+4. `Consumer<T>`: Represents an operation that accepts a single input argument and returns no result. Unlike most other functional interface, Consumer is expected to operate via side-effects.   
+   - T - the type of the input to the operation  
+5. `BiConsumer<T, U>`: Represents an operation that accepts two input arguments and returns no result. This is the two-arity specialization of Consumer.  
+   - T - the type of the first argument to the operation 
+   - U - the type of the second argument to the operation  
+6. 
 
 
 JDK documentation: [java.util.function](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/package-summary.html)        
@@ -156,6 +166,7 @@ System.out.println("// Declarative approach");
 #### Examples of Function<T,R>      
 ```java
 public static void main(String[] args) {
+        // Function takes 1 argument and produces 1 result
         int increment = incrementByOne(1);
         System.out.println(increment);
 
@@ -182,6 +193,54 @@ public static void main(String[] args) {
 
     static int incrementByOne(int number) {
         return number + 1;
+    }
+```
+
+#### Examples of BiFunction<T, U, R>
+```java
+public static void main(String[] args) {
+        // Function takes 2 arguments and produces 1 result
+        System.out.println(incrementByOneAndMultiply(4, 100));
+        System.out.println(incrementByOneAndMultiplyBiFunction.apply(4, 100));
+    }
+
+    static BiFunction<Integer, Integer, Integer> incrementByOneAndMultiplyBiFunction = new BiFunction<Integer, Integer, Integer>() {
+        @Override
+        public Integer apply(Integer integer, Integer integer2) {
+            return (integer + 1) * integer2;
+        }
+    };
+
+    static int incrementByOneAndMultiply(int number, int numToMultiplyBy) {
+        return (number + 1) * numToMultiplyBy;
+    }
+```
+
+#### Examples of Consumer<T>
+```java
+public static void main(String[] args) {
+        // Normal Java function
+        Customer maria = new Customer("Maria", "99999");
+        greetCustomer(maria);
+
+        // Consumer Functional interface
+        greetCustomerConsumer.accept(maria);
+    }
+
+    static Consumer<Customer> greetCustomerConsumer = customer -> System.out.println("Hello " + customer.customerName + ", thanks for registering phone number " + customer.customerPhoneNumber);
+
+    static void greetCustomer(Customer customer) {
+        System.out.println("Hello " + customer.customerName + ", thanks for registering phone number " + customer.customerPhoneNumber);
+    }
+
+    static class Customer{
+        private final String customerName;
+        private final String customerPhoneNumber;
+
+        Customer(String customerName, String customerPhoneNumber) {
+            this.customerName = customerName;
+            this.customerPhoneNumber = customerPhoneNumber;
+        }
     }
 ```
 

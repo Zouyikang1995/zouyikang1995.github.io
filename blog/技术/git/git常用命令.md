@@ -1,3 +1,47 @@
+# Git
+
+## Git操作
+### 安装Git
+* git官网下载安装[git](https://git-scm.com/downloads)     
+* 检测`git`是否安装成功
+  1. windows系统的桌面右键查看有以下两个命令
+     Git GUI Here    
+     Git Bash Here
+  2. 终端Terminal中输入以下命令查看是否出现git版本号。(windows/Mac通用)
+     git --version        
+
+### 文件基础操作
+1. 一个简单的操作步骤：
+```git
+$ git init 
+$ git add .
+$ git commit
+```
+* git init      -初始化仓库    
+* git add .     -添加文件到暂存区     
+* git commit    -将暂存区内容添加到仓库中  
+2. 配置用户名和邮箱
+   * 用户名： git config --global user.name `用户名`     
+   * 邮箱： git config --global user.email `邮箱`     
+   * 查看是否配置成功： git config --global --list   
+3. 改动文件名称： git mv 改动前文件名 改动后文件名
+4. 移动文件：git mv 文件名 文件夹  
+5. 还原文件：git checkout -- 文件夹/文件名   
+   退回版本：git reset --hard HEAD^
+            git reset --hard `id`  
+6. 推送至远程仓库：git push origin master  
+7. 添加标签名： git tag `标签名` `id`
+   删除标签名： git tag -d `标签名`   
+   推送至远程仓库： git push origin `tag名`   
+
+### 分支基础操作
+1. 创建分支名：git branch `分支名`   
+   创建并切换分支：git checkout -b `分支名`    
+2. 切换分支：git checkout `分支名`    
+3. 删除分支：git branch -d `分支名`    
+4. 合并分支：git merge `分支名`  
+   解决冲突：git merge -abort `分支名`  
+
 ## Git主要知识点
 
 1. 操作暂存区快照
