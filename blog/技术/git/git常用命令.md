@@ -9,6 +9,7 @@
      Git Bash Here
   2. 终端Terminal中输入以下命令查看是否出现git版本号。(windows/Mac通用)
      git --version        
+* 取消ssl证书命令：git config --global http.sslVerify false  
 
 ### 文件基础操作
 1. 一个简单的操作步骤：
@@ -27,6 +28,7 @@ $ git commit
 3. 改动文件名称： git mv 改动前文件名 改动后文件名
 4. 移动文件：git mv 文件名 文件夹  
 5. 还原文件：git checkout -- 文件夹/文件名   
+   丢弃工作区的修改：git restore 文件名
    退回版本：git reset --hard HEAD^
             git reset --hard `id`  
 6. 推送至远程仓库：git push origin master  
@@ -228,3 +230,7 @@ git push origin v1.4                # 推送标签到远程仓库
 git tag -d v1.4                     # 删除本地标签
 git push origin :refs/tags/v1.4     # 删除远程标签
 ```
+
+## 参考   
+[菜鸟：git教程](https://www.runoob.com/git/git-tutorial.html)        
+[掘金：Git - 在版本之间切换自如](https://juejin.cn/post/6844903876642996238)       
