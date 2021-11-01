@@ -234,3 +234,4 @@ git push origin :refs/tags/v1.4     # 删除远程标签
 ## 参考   
 [菜鸟：git教程](https://www.runoob.com/git/git-tutorial.html)        
 [掘金：Git - 在版本之间切换自如](https://juejin.cn/post/6844903876642996238)       
+[问题：Failed to connect to github.com port 443:connection timed out](https://blog.csdn.net/Hodors/article/details/103226958)     
