@@ -353,7 +353,9 @@ var Api = (function() {
             fileName: "个人介绍",
             tid: gh.readmeTid
         };
+        tid = gh.readmeTid; 
         if (tid) {
+            
             var arr = tid.split("/");
             var fileName = arr[arr.length - 1];
             node.name = fileName;
