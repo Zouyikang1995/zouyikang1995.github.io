@@ -4,7 +4,7 @@
 var gh = {
     username: "${username}", //pages用户名
     baseBlogUrl: "https://api.github.com/repos/${username}/${username}.github.io/contents/", //博客内容地址
-    readmeTid: "?tid=blog/ABOUT/AboutMe.md", //个人主页标识
+    readmeTid: "blog/ABOUT/AboutMe.md", //个人主页标识
     treeUrl: "https://api.github.com/repos/${username}/${username}.github.io/git/trees/master?recursive=1", //所有文件地址
     cache: {}, //文件缓存
     clientID: "bd98ae7094366c0c7473", //gitalk专用 用户自定义授权app参数
@@ -353,9 +353,7 @@ var Api = (function() {
             fileName: "个人介绍",
             tid: gh.readmeTid
         };
-        tid = gh.readmeTid; 
         if (tid) {
-            
             var arr = tid.split("/");
             var fileName = arr[arr.length - 1];
             node.name = fileName;
