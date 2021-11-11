@@ -24,15 +24,15 @@ IOC与DI的优势？(为什么IOC和DI在Java中这么重要，而在Python、Ja
 [浅谈IOC与DI](https://www.jianshu.com/p/42748a82f10e)     
 
 ## SpringBoot版本号   
-例子：2.1.6.RELEASE 
-2 - 主版本，短期内不会变更，发生重大变化时，有时甚至不兼容之前的版本。   
-1 - 次版本，发布新特性，通常保证兼容。  
-6 - 增量版本，通常是bug修复，通常保证兼容。
-RELEASE - 发布版本/里程碑版本，可能有RC,Alpha,Beta,GA, 描述版本的发布计划或者是版本的发布状态。      
-   Alpha：内部测试     
-   Beta：准备公开测试(可能不稳定)      
-   SNAPSHOT: 快照版本，比较稳定，还在持续跟进   
-   RELEASE/GA(General Availability)：一般为稳定版本     
+例子：`2.1.6.RELEASE` 
+`2` - `主版本`，短期内不会变更，发生重大变化时，有时甚至不兼容之前的版本。   
+`1` - `次版本`，发布新特性，通常保证兼容。  
+`6` - `增量版本`，通常是bug修复，通常保证兼容。
+* `RELEASE` - 发布版本/里程碑版本，可能有RC,Alpha,Beta,GA, 描述版本的发布计划或者是版本的发布状态。      
+* `Alpha`：内部测试     
+* `Beta`：准备公开测试(可能不稳定)      
+* `SNAPSHOT`: 快照版本，比较稳定，还在持续跟进   
+* `RELEASE/GA(General Availability)`：一般为稳定版本     
 
 ## JDK的安装    
 通常选择版本：JDK8，JDK11，JDK13。    
