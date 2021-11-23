@@ -106,6 +106,95 @@ public class BannerController {
 * 在url后以`url?version=1`的形式标明。    
 * 在资源名前面指出,如以上示例。            
 
+## Java编程思想深度理论知识
+1. 软件工程方法论,目的是方便项目的`维护`和`迭代`。
+2. 好的代码应该具有的特点：
+   `不罗嗦`,`自描述性`,`可维护性`
+3. 软件工程的原则：`开闭原则(OCP Open Closed principle)`
+   对扩展是开放的，对修改是封闭的。
+4. 实现开闭原则的关键:`面向抽象编程`. 
+   利用interface,abstract.
+采用实体类的时候需要新建该对象,但我们的目的并不是获取该对象,而是想要调用该对象的方法,因而使用interface就显得十分重要了。因此,在实体类中不要过分依赖于某个实体类,尽量面向接口编程。       
+演化过程: `interface` -> `设计模式:工厂模式` -> `IOC/DI`    
+目的： => `面向抽象` => `OCP` => `可维护的代码`
+理解:
+1. 关于interface: 单纯的interface可以统一方法的调用,但是它不能统一对象的实例化.   
+2. 面向对象的两大主要内容: `实例化对象`,`调用方法(完成业务逻辑)`      
+3. `表象`：只有一段代码中没有new的出现,才能保持代码的相对稳定,才能你逐步实现OCP。   
+4. `实质`:一段代码如果要保持稳定,就不应该负责对象的实例化。     
+5. `结论`：对象实例化是不可能消除的。  
+6. `解决方法`: 因此需要把对象实例化的过程,转移到其他的代码片段里。      
+7. `理由`：代码中总是会存在不稳定，隔离这些不稳定，保证其它的代码是稳定的。      
+8. `原因`：变化造成了代码的不稳定。    
+9. 配置文件属于系统外部，不属于代码本身。    
+
+## Spring与SpringBoot
+1. SSM = Spring + Spring MVC + MyBatis (Spring和Spring MVC被包含在Spring Framework当中。)   
+2. Spring Framework是SpringBoot的基础，SpringBoot是Spring Framework的应用。  
+3. SpringBoot的核心优势：`自动配置`。   
+
+## SpringBoot的目的及意义
+IOC实现：创建容器，加入容器，注入。其中，由于SpirngBoot作为一个容器，需要考虑到各种场景，具备灵活性。      
+SpringBoot的总体目的： 
+抽象意义：控制权交给用户   
+具体意义：实现灵活的OCP      
+
+## SpringBoot注入
+将对象注入到容器的方式：
+1. XML方式    
+2. 注解模式  
+stereotype annotations模式注解: 
+* @Component 基础注解，组件/类/bean     
+* @Service 
+* @Controller
+* @Repository
+* @Configuration 
+`IOC对象实例化注入时间`：在SpringBoot启动时实例化，即自动/提前实例化。可以通过@Lazy注解实现延迟实例化。      
+@Autowired注入方式：
+1. 属性注入。（不规范，属性为private，对私有属性注入不推荐。）    
+2. 构造器注入。（推荐）   
+3. setter注入。     
+注入优先级：
+1. by type(默认注入方式)，根据类型注入，如果同一个接口有多个实现的话，就会出错。     
+2. by name，按照字段的名称来寻找实现类。  
+3. 主动注入方式，加上注解@Qualifier    
+
+## 面向对象中变化的解决方案
+1. `策略模式`: 制定一个Interface，然后用多个类实现同一个interface。    
+2. 一个类，利用属性来解决变化。  
+
+## 配置@Configuration
+1. 为什么Spring偏爱配置    
+OCP原则对应的是变化，变化需要隔离/反映到配置文件当中。其中，xml很好地隔离和反映了变化。 
+2. 为什么要将变化隔离到配置文件。  
+* 配置文件具有集中性。   
+* 配置文件比较清晰，配置文件里面没有业务逻辑。     
+3. 配置种类：
+* 常规配置 key：value    
+* xml配置，以类/对象形式进行出现。       
+4. 利用@Configuration+@Bean的方式，可以灵活地将bean注入到IOC容器中。     
+```java
+例子：
+@Configuration
+public class DatabaseConfiguration{
+   @Value("${mysql.ip}")
+   private String ip;
+
+   @Value("${mysql.port}")
+   private Integer port;
+
+   @Bean
+   public IConnect mysql(){
+      return new MySQL(this.ip, this.port);
+   }
+}
+```
+其中，有几点值得说明：
+* @Configuration和@Bean并不是一定要用在一起，可以根据情况灵活地选择应用。   
+* 利用@Component+@Value可以实现以上相同的目标，但是当IConnect接口的实现有多个时，Spring无法决定注入哪个实例。因而，利用@Configuration和@Bean解决的问题是，既包含常规配置(key,value)的配置模式，又包含以类/对象的配置模式而组成的混合配置模式。往往，当一个接口有多个实现时，无法通过@Component来实现接口灵活的自动注入，这是@Configuration的应用场景，从而实现了OCP的编程特性。              
+5. @Configuration编程模式：既能灵活地在配置文件中修改bean的属性，又能将bean给注入到IOC容器中，从而实现了OCP原则的一种编程模式。    
+
+
 ## 快速开发技巧
 1. 布置springboot项目热重启。
    * `dependency`中添加`devtools`
