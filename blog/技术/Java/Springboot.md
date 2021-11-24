@@ -150,10 +150,12 @@ stereotype annotations模式注解:
 * @Repository
 * @Configuration 
 `IOC对象实例化注入时间`：在SpringBoot启动时实例化，即自动/提前实例化。可以通过@Lazy注解实现延迟实例化。      
+`加入IOC容器的扫描对象`：通过`@ComponentScan`注解实现，默认扫描Application.java类的同级和下级目录。      
 @Autowired注入方式：
-1. 属性注入。（不规范，属性为private，对私有属性注入不推荐。）    
-2. 构造器注入。（推荐）   
+1. 属性(成员变量)注入。（不规范，属性为private，对私有属性注入不推荐。）    
+2. 构造函数注入。（推荐）   
 3. setter注入。     
+
 注入优先级：
 1. by type(默认注入方式)，根据类型注入，如果同一个接口有多个实现的话，就会出错。     
 2. by name，按照字段的名称来寻找实现类。  
@@ -163,15 +165,67 @@ stereotype annotations模式注解:
 1. `策略模式`: 制定一个Interface，然后用多个类实现同一个interface。    
 2. 一个类，利用属性来解决变化。  
 
+### 策略模式的实现方式
+1. by name：通过类的名称来切换注入类。      
+2. 通过添加@Qualifier注解来指定注入类。      
+3. 有选择的只注入一个bean，注释掉其它实现类上面的@Component注解。    
+4. 使用@Primary注解来指定优先注入的bean。       
+
+### 条件注解  
+1. 创建自定义条件注解方法：通过@Conditional注解+实现Condition接口。   
+例子：创建HeroConfiguration类加上@Configuration和@Bean注解，然后创建DianaCondition实现Condition方法。  
+```java
+@Configuration
+public class HeroConfiguration {
+    @Bean
+    @Conditional(DianaCondition.class)
+    public ISkill diana() {
+        return new Diana("Diana", 18);
+    }
+}
+
+public class DianaCondition implements Condition {
+    @Override
+    public boolean matches(ConditionContext conditionContext, AnnotatedTypeMetadata annotatedTypeMetadata) {
+        String name = conditionContext.getEnvironment().getProperty("hero.condition");
+        return "diana".equalsIgnoreCase(name);
+    }
+}
+
+#application.properties
+hero.condition = Diana
+```
+2. 内置的成品条件注解
+* `@ConditionOnProperty`
+   value -> 配置变量的key    
+   havingValue -> 配置变量的值    
+   matchIfMissing -> 如果配置文件中未找到相关配置则为true   
+```java
+@Bean
+    @ConditionalOnProperty(value = "hero.condition", havingValue = "diana", matchIfMissing = true)
+    public ISkill diana() {
+        return new Diana("Diana", 18);
+    }
+```
+* `@ConditionOnBean` 当SpringIoc容器内存在指定Bean的条件    
+ `@ConditionalOnMissingBean`与之含义相反
+```java
+@Bean
+    @ConditionalOnBean(name = "mysql")
+    public ISkill diana() {
+        return new Diana("Diana", 18);
+    }
+```
+
 ## 配置@Configuration
 1. 为什么Spring偏爱配置    
 OCP原则对应的是变化，变化需要隔离/反映到配置文件当中。其中，xml很好地隔离和反映了变化。 
 2. 为什么要将变化隔离到配置文件。  
-* 配置文件具有集中性。   
-* 配置文件比较清晰，配置文件里面没有业务逻辑。     
+   * 配置文件具有集中性。   
+   * 配置文件比较清晰，配置文件里面没有业务逻辑。     
 3. 配置种类：
-* 常规配置 key：value    
-* xml配置，以类/对象形式进行出现。       
+   * 常规配置 key：value    
+   * xml配置，以类/对象形式进行出现。       
 4. 利用@Configuration+@Bean的方式，可以灵活地将bean注入到IOC容器中。     
 ```java
 例子：
@@ -190,8 +244,8 @@ public class DatabaseConfiguration{
 }
 ```
 其中，有几点值得说明：
-* @Configuration和@Bean并不是一定要用在一起，可以根据情况灵活地选择应用。   
-* 利用@Component+@Value可以实现以上相同的目标，但是当IConnect接口的实现有多个时，Spring无法决定注入哪个实例。因而，利用@Configuration和@Bean解决的问题是，既包含常规配置(key,value)的配置模式，又包含以类/对象的配置模式而组成的混合配置模式。往往，当一个接口有多个实现时，无法通过@Component来实现接口灵活的自动注入，这是@Configuration的应用场景，从而实现了OCP的编程特性。              
+   * @Configuration和@Bean并不是一定要用在一起，可以根据情况灵活地选择应用。   
+   * 利用@Component+@Value可以实现以上相同的目标，但是当IConnect接口的实现有多个时，Spring无法决定注入哪个实例。因而，利用@Configuration和@Bean解决的问题是，既包含常规配置(key,value)的配置模式，又包含以类/对象的配置模式而组成的混合配置模式。往往，当一个接口有多个实现时，无法通过@Component来实现接口灵活的自动注入，这是@Configuration的应用场景，从而实现了OCP的编程特性。              
 5. @Configuration编程模式：既能灵活地在配置文件中修改bean的属性，又能将bean给注入到IOC容器中，从而实现了OCP原则的一种编程模式。    
 
 
