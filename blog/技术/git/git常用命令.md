@@ -9,7 +9,10 @@
      Git Bash Here
   2. 终端Terminal中输入以下命令查看是否出现git版本号。(windows/Mac通用)
      git --version        
-* 取消ssl证书命令：git config --global http.sslVerify false  
+* 取消ssl证书命令：
+```shell
+git config --global http.sslVerify false  
+```
 
 ### 文件基础操作
 1. 一个简单的操作步骤：
