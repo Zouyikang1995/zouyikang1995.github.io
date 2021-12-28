@@ -207,7 +207,7 @@ hero.condition = Diana
         return new Diana("Diana", 18);
     }
 ```
-* `@ConditionOnBean` 当SpringIoc容器内存在指定Bean的条件    
+* `@ConditionalOnBean` 当SpringIoc容器内存在指定Bean的条件    
  `@ConditionalOnMissingBean`与之含义相反
 ```java
 @Bean
@@ -216,8 +216,18 @@ hero.condition = Diana
         return new Diana("Diana", 18);
     }
 ```
+@ConditionalOnClass    
+@ConditionalOnExpression 基于SpEL表达式作为判断条件    
+@ConditionalOnJava 基于JVM版本作为判断条件    
+@ConditionalOnJndi 在JNDI存在时查找指定的位置    
+@ConditionalOnMissingClass 当SpringIoc容器内不存在指定class的条件    
+@ConditionalOnWebApplication 当前项目不是Web项目的条件   
+@ConditionalOnProperty 指定的属性是否有指定的值   
+@ConditionalOnResource 类路径是否有指定的值   
+@ConditionalOnSingleCandidate 当指定Bean在SpringIoc容器内只有一个，或者虽然有多个但是指定首选的bean   
+@ConditionalOnWebApplication 当前项目是Web项目的条件   
 
-## 配置@Configuration
+### 配置@Configuration
 1. 为什么Spring偏爱配置    
 OCP原则对应的是变化，变化需要隔离/反映到配置文件当中。其中，xml很好地隔离和反映了变化。 
 2. 为什么要将变化隔离到配置文件。  
@@ -248,11 +258,143 @@ public class DatabaseConfiguration{
    * 利用@Component+@Value可以实现以上相同的目标，但是当IConnect接口的实现有多个时，Spring无法决定注入哪个实例。因而，利用@Configuration和@Bean解决的问题是，既包含常规配置(key,value)的配置模式，又包含以类/对象的配置模式而组成的混合配置模式。往往，当一个接口有多个实现时，无法通过@Component来实现接口灵活的自动注入，这是@Configuration的应用场景，从而实现了OCP的编程特性。              
 5. @Configuration编程模式：既能灵活地在配置文件中修改bean的属性，又能将bean给注入到IOC容器中，从而实现了OCP原则的一种编程模式。    
 
+### 自动装配/配置    
+1. 原理是什么     
+利用@Import和实现ImportSelector的类来导入第三方库。  
+2. 为什么要有自动装配      
+类似于@Component和@Configuration注解的用法，用来加载第三方SDK。同时，Spring框架与其它框架的不同之处在于IOC容器，自动装配解决的本质问题是将第三方的JDK加载到Spring的IOC容器当中。             
 
-## 快速开发技巧
+### SPI机制/思想
+全名：Service Provider Interface   
+本质：应对变化所做出的一种机制。    
+做法：系统中有不同模块，相对应有不同的解决方案。    
+调用方可以调用模块中的标准服务接口，方案可以拥有多种。方案1，方案2，方案3等等。   
+基本原理：基于interface + 策略模式 + 配置文件   
+不同点：与@Primary和@条件注解的不同之处在于，SPI注重于解决整体解决方案的变化，而@Primary和@条件注解着眼于具体的类/粒度小的变化。             
+
+
+
+## 框架机制
+与核心机制中包含的深度理论不同，框架机制是用来开发业务的。    
+
+### 异常反馈
+作用：用来反馈给前端/客户端    
+存在种类：资源不存在/参数错误/内部错误等等。   
+
+### 异常分类    
+#### 语法层面分类   
+1. 异常基类：Throwable
+2. 引申的两种异常：
+   Error：错误(操作系统上错误或者JVM的错误，发生错误后应用程序通常不能启动，代码通常不能处理)    
+   Exception：异常(通常用代码处理，例如空指针异常)   
+3. Exception异常的分类：
+   CheckedException:(必须在程序当中进行处理，如果不处理则在编译过程中无法通过)   
+   RuntimeException:运行时异常，不一定在编译阶段就能发现(不强制要求处理)      
+4. 对于web开发来讲，如果我们实现了全局异常处理，用Exception和RunTimeException区别不大，建议使用RuntimeException。     
+5. RuntimeException和CheckedException的使用场景。
+   RuntimeException：对于一个异常来说我们无能为力，例如在数据库中查询一条数据没有记录。严格意义上来讲不是一个bug。             
+   CheckException：如果对一个异常，我们可以处理。例如调用方法找不到，读取文件找不到等等。是一个真正的bug。       
+
+#### 已知/未知层面
+未知异常：对于前端开发者和用户，都是无意义的。服务端开发者代码逻辑有问题。模糊处理，服务器异常返回给前端。          
+
+## 参数校验
+重要性：   
+1. 规范的参数校验可以提高前后端的开发效率。   
+2. 对于保护Web项目的机密数据十分重要。   
+注意事项：不能对参数不进行校验或者将校验参数写在控制器Controller中。    
+
+### URL中的参数(GET请求)
+* 方式一：URL路径当中的参数  
+  例如：`@GettingMapping("/test/{id}")`         
+```java
+@GetMapping("/test/{idName}")
+    public String test(@PathVariable(name="idName") Integer id) {
+    }
+```
+通过pathVariable指定名字name，将idName与id进行关联。    
+
+* 方式二：查询参数
+  例如：`@GettingMapping("/test?parameter=xxx)`      
+```java
+@GetMapping("/test?name=xxx")
+    public String test(@RequestParam String name) {
+    }
+```
+### Request Body中的参数(POST请求)
+使用@RequestBody注解，同时利用Map<String, Object>或者新建一个对象进行接收。   
+* 方式一：(存在拆箱装箱的问题)  
+```java
+@Postmapping("/test")  
+public String test(@RequestBody Map<String, Object> person){
+
+}
+```
+* 方式二：(推荐)
+新建PersonDTO对象，用来接收前端传来的person。   
+```java
+@Postmapping("/test")  
+public String test(@RequestBody PersonDTO person){
+   
+}
+```
+
+
+### 全局异常处理   
+UnifyResponse 统一错误响应  
+```json
+{
+   code:10001,
+   message:xxx,
+   request:GET url
+}
+```
+
+### SpringBoot中根据包名自动生成路由   
+1. 创建AutoPrefixUrlMapping.java类继承`RequestMappinghandlerMapping`类。重写`getMappingForMethod`方法。    
+```java
+public class AutoPrefixUrlMapping extends RequestMappingHandlerMapping {
+
+    @Value("${missyou.api-package}")
+    private String apiPackagePath;
+
+    @Override
+    protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
+        RequestMappingInfo mappingInfo = super.getMappingForMethod(method, handlerType);
+        if (null != mappingInfo) {
+            String prefix = this.getPrefix(handlerType);
+            return RequestMappingInfo.paths(prefix).build().combine(mappingInfo);
+        }
+        return mappingInfo;
+    }
+
+    private String getPrefix(Class<?> handlerType) {
+        String packageName = handlerType.getPackageName();
+        String dotPath = packageName.replaceAll(this.apiPackagePath, "");
+        return dotPath.replace(".", "/");
+    }
+}
+```
+
+2. 创建AutoPrefixConfiguration.java类实现`webMvcRegistrations`接口，并通过`@Component`注解加入IOC容器。     
+```java
+@Component
+public class AutoPrefixConfiguration implements WebMvcRegistrations {
+    @Override
+    public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
+        return new AutoPrefixUrlMapping();
+    }
+}
+```
+
+
+## 快速开发技巧及常见问题
 1. 布置springboot项目热重启。
    * `dependency`中添加`devtools`
    * `setting`中`compiler`设置为`build project automatically`    
+
+2. 解决properties文件中乱码的问题    
+`Settings` → `File Encodings` → `Default encoding for properties files:` → 选中`UTF-8` → `Transparent native-to-ascii conversion` → 打对勾    
 
 ## 参考资料
 [Spring官方文档](https://spring.io/projects/spring-boot#learn)       
