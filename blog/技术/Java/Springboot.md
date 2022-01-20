@@ -387,6 +387,155 @@ public class AutoPrefixConfiguration implements WebMvcRegistrations {
 }
 ```
 
+### lombok的使用
+* pom文件中加入dependency。
+```java
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+</dependency>
+```
+#### 利用Lombok生成Getter和Setter
+* 在entity类上面加上注解@Getter和@Setter
+* @Data的区别：@Data除了Getter和Setter之外，还会重写equals，toString和hashCode方法。   
+* 注意：final修饰的字段，@Data加上注解后会生成Getter方法，不会生成Setter方法。    
+#### 利用Lombok生成构造器Constructor 
+* 生成无参构造器：@NoArgsConstructor   
+* 生成全部参数的构造器:@AllArgsConstructor   
+* 对某个字段要求不为空：@NonNull
+* 生成对要求字段的构造器：@RequiredArgsConstructor
+```java
+例子：
+@Getter
+@Setter
+@AllArgsConstructor
+@RequiredArgsConstructor
+@NoArgsConstructor
+public class PersonDTO{
+    @NonNull
+    private String name;
+    private Integer age;
+}
+```
+#### @Builder构造器模式
+1. 类上面加上@Builder注解。
+2. 类实例化时使用builder构造器。
+```java
+PersonDTO dto = PersonDTO.builder()
+          .name("lucy")
+          .age(18)
+          .build();
+```
+* 注意：
+1. 只在类上面加上@Builder注解后，不能使用Getter和Setter方法，不能用new来实例化类。
+2. 针对情况1，在类上面加上@Setter方法也没有用，原因是@Builder会给类生成一个私有的无参构造函数。   
+3. 要想既使用Builder方式，又想使用普通的构造方法，可以在类上再添加一个@NoArgsConstructor注解，生成一个无参构造函数，或者自己手动写一个无参的public构造函数。       
+4. 使用@Builder的方法创建实体后，如果要将实体返回给前端，需要在类上面加上@Getter方法获取字段。     
+
+#### JSR
+定义：Java Specification Requests - Java提案规范         
+* lombok是JSR-269规范的实现     
+* 参数校验是JSR-303规范的实现：Bean Validation           
+* JSR-303的一个实现：Hibernate-Validator
+  常用注解：@Min，@Max，@Positive等
+##### 常用注解   
+1. 加上@Max，@Min等注解时要在类上面加上@Validated的注解。  
+```java
+@Validated
+public class BannerController {
+    @PostMapping("/test/{id}")
+    public PersonDTO test(@PathVariable(name = "id") @Range(min = 1, max = 10) Integer id) {
+    }
+}
+```
+2. 在对自己编写的类进行参数校验时要在参数名前加上注解@Validated.   
+BannerController.java
+```java
+@Validated
+public class BannerController {
+    @PostMapping("/test/{id}")
+    public PersonDTO test(@PathVariable(name = "id") @Range(min = 1, max = 10) Integer id, @RequestBody @Validated PersonDTO person) {
+    }
+}
+```
+PersonDTO.java
+```java
+@Builder
+@Getter
+@PasswordEqual(min = 1)
+public class PersonDTO {
+    @NonNull
+    @Length(min = 2, max = 10)
+    private String name;
+    private Integer age;
+}
+```
+3. 如果在接收的对象中还有其它对象，需要在级联的对象上面打上@Valid的注解。  
+```java
+@Builder
+@Getter
+@PasswordEqual(min = 1)
+public class PersonDTO {
+    @NonNull
+    @Length(min = 2, max = 10)
+    private String name;
+    private Integer age;
+
+    @Valid
+    private SchoolDTO schoolDTO;
+}
+```
+4. @Valid和@Validated的区别。    
+   * 两者都是用来作为参数校验的，某些情况下可以互换使用。      
+   * 在开启验证时推荐使用@Validated，在级联时使用@Valid。     
+
+##### 自定义注解
+1. 新建注解@Annotation，需要配置@Retention，@Target，@Constraint等。      
+各个注解的含义如下：
+* @Documented - 生成JDK文档，非必须。
+* @Retention - 注解的生命周期阶段。有RetentionPolicy.SOURCE, RetentionPolicy.RUNTIME, RetentionPolicy.CLASS三个阶段，一般可以选择RUNTIME。
+* @Target - 标记该注解的作用对象，可以是类，属性，方法等。@Target(value={TYPE,FIELD,METHOD,PARAMETER,CONSTRUCTOR,LOCAL_VARIABLE})      
+* @Constraint - 对应注解逻辑实现的类。
+`自定义注解`：
+```java
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE})
+@Constraint(validatedBy = PasswordValidator.class)
+public @interface PasswordEqual {
+    int min() default 4;
+
+    int max() default 6;
+
+    String message() default "passwords are not equal";
+
+    Class<?>[] groups() default {};
+
+    Class<? extends Payload>[] payload() default {};
+}
+```
+`注解逻辑实现类`：    
+```java
+public class PasswordValidator implements ConstraintValidator<PasswordEqual, PersonDTO> {
+    private int min;
+    private int max;
+
+    @Override
+    public void initialize(PasswordEqual constraintAnnotation) {
+        this.min = constraintAnnotation.min();
+        this.max = constraintAnnotation.max();
+    }
+
+    @Override
+    public boolean isValid(PersonDTO personDTO, ConstraintValidatorContext constraintValidatorContext) {
+        String password1 = personDTO.getPassword1();
+        String password2 = personDTO.getPassword2();
+        boolean match = password1.equals(password2);
+
+        return match;
+    }
+}
+```
 
 ## 快速开发技巧及常见问题
 1. 布置springboot项目热重启。
@@ -400,3 +549,5 @@ public class AutoPrefixConfiguration implements WebMvcRegistrations {
 [Spring官方文档](https://spring.io/projects/spring-boot#learn)       
 [接近8000字的Spring/SpringBoot常用注解总结！安排！](https://segmentfault.com/a/1190000022521844)     
 [跟着官方文档学Spring Boot](https://zhuanlan.zhihu.com/p/55173112)      
+[SpringBoot使用hibernate validator的基本注解](https://www.cnblogs.com/mr-yang-localhost/p/7812038.html#_label5)                   
+[Java基础加强总结-注解](https://www.cnblogs.com/xdp-gacl/p/3622275.html)             
