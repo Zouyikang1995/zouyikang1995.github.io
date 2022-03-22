@@ -494,7 +494,7 @@ public class PersonDTO {
 各个注解的含义如下：
 * @Documented - 生成JDK文档，非必须。
 * @Retention - 注解的生命周期阶段。有RetentionPolicy.SOURCE, RetentionPolicy.RUNTIME, RetentionPolicy.CLASS三个阶段，一般可以选择RUNTIME。
-* @Target - 标记该注解的作用对象，可以是类，属性，方法等。@Target(value={TYPE,FIELD,METHOD,PARAMETER,CONSTRUCTOR,LOCAL_VARIABLE})      
+* @Target - 标记该注解的作用对象，可以是类，属性，方法等。`@Target(value={TYPE,FIELD,METHOD,PARAMETER,CONSTRUCTOR,LOCAL_VARIABLE})`      
 * @Constraint - 对应注解逻辑实现的类。
 `自定义注解`：
 ```java
@@ -536,11 +536,324 @@ public class PasswordValidator implements ConstraintValidator<PasswordEqual, Per
     }
 }
 ```
+自定义注解的使用：   
+```java
+@Builder
+@Getter
+@PasswordEqual(min = 1)
+public class PersonDTO {
+    @NonNull
+    @Length(min = 2, max = 10)
+    private String name;
+    private Integer age;
+
+    private String password1;
+    private String password2;
+}
+```
+
+## 项目分层与JPA技术
+### 项目分层原则
+1. 分层的目的：微服务出现之前，大型项目的每一层一般都是由不同的开发者或者团队完成的。目的在于分隔每层的开发，大家各司其职，互不打扰。归根结底，分层是对OCP原则更大层面的实践。      
+* 注意：同样是分隔项目的开发，分层被称为水平分隔，而微服务被称为垂直分隔。    
+
+### 如何创建数据表
+1. 可视化管理工具(navicat, mysql workbench, php admin)。    
+2. 手写sql语句。    
+3. Model模型类(通过class类来映射数据表)。  
+4. 数据库的配置，在`application.properties/yml`中。  
+```yml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/xxx?characterEncoding=utf-8&serverTimezone=GMT%2B8
+    username: xxx
+    password: xxx
+  jpa:
+    hibernate:
+      ddl-auto: update
+```   
+其中，`ddl-auto`可以用来配置数据表的更新方式，可以是`none`, `update`, `create-drop`。  
+
+### 数据库表与表之间关系  
+`一对一`：理论上一般是一个表字段太多拆分为多个表，更多是现实存在的意义。创建一对一数据表时一般基于两方面考虑：
+1. 提高查询效率。      
+2. 从业务的角度，将不同字段归类。     
+例如：人和身份证    
+
+`一对多`：一张表对应多张表。
+例如：班级和学生
+
+`多对多`：多对多一般需要第三张表，两张表无法表示多对多的关系。    
+例如：老师和学生     
+
+### 数据库设计思想
+* 数据库设计思考方式：
+  1. 第一步：将表按照模型(实体)来思考，按照面向对象的原则，一个表就是一个对象。     
+  2. 理解对象与对象之间的关系。(一对一，一对多，多对多)。      
+  3. 细化工作，设计字段的限制，长度，唯一索引等。
+
+* 从性能方面考虑数据库设计：
+  1. 一张表中的记录不要超过5000万条。     
+  2. 建立索引以优化表结构。
+  3. 水平分表，将其拆分为多个表分摊数据。    
+  4. 垂直分表，将字段拆分到多个表中。    
+
+* 注意：数据库的优化更多不是体现在设计上，而是查询方式。另外，利用缓存去减少数据库的查询是解决性能最有效的方式。  
+
+### 数据表创建
+1. 利用JPA设计一对多关系的数据表。Banner对应多个BannerItem。
+Banner.java   
+```java
+@Entity
+@Getter
+@Setter
+@Where(clause = "delete_time is null")
+public class Banner extends BaseEntity {
+    @Id
+    private Long id;
+    private String name;
+    private String description;
+    private String title;
+    private String img;
+
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bannerId")
+    private List<BannerItem> items;
+}
+```
+BannerItem.java
+```java
+@Entity
+@Getter
+@Setter
+public class BannerItem extends BaseEntity {
+    @Id
+    private Long id;
+    private String img;
+    private String keyword;
+    private short type;
+    private String name;
+    private Long bannerId;
+}
+```
+* 其中，bannerId是BannerItem的外键，与Banner表中的id对应。     
+* 可以用以下语句来设置主键自增长。 
+```java
+ @GeneratedValue(strategy = GenerationType.IDENTITY)   
+```
+
+### JPA查询数据库
+1. BannerRepository仓储继承JpaRepository<>。传入泛型，<Banner, Long>前者是实体类型，后者是主键类型。查询方法根据Jpa查询语句的命名方法，可以通过Jpa省略书写实现类来实现查询方法。      
+```java
+@Repository
+public interface BannerRepository extends JpaRepository<Banner, Long> {
+    Banner findOneById(Long id);
+
+    Banner findOneByName(String name);
+}
+```
+
+2. 在Service层调用BannerRepository里面的方法。
+```java
+@Service
+public class BannerServiceImpl implements BannerService {
+    @Autowired
+    private BannerRepository bannerRepository;
+
+    public Banner getByName(String name) {
+        return bannerRepository.findOneByName(name);
+    }
+}
+```
+
+3. 配置Jpa打印sql语句。
+```java
+spring:
+  jpa:
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+```
+
+4. 配置导航属性懒加载。   
+```java
+@OneToMany(fetch = FetchType.LAZY)
+```
+
+### Jpa导航关系配置
+1. 双向一对多关系的配置。
+   一方：关系被维护端
+   多方：关系维护端
+* 一方打上@OneToMany,多方打上@ManyToOne。
+* 注明关联属性，@JoinColumn打在关系维护端（多方）。一方不必打上@JoinColumn。  
+* 一方增加参数mappedBy，参数是多方导航属性。(这时候一方不能添加注解@JoinColumn)   
+通过以上的设置，实际上一方就放弃了关系的维护，在实际操作中，数据库会优先保存一方，然后保存多方，这样避免了发送update语句。当然，也可以在一方和多方同时加上注解@JoinColumn，不采用mappedBy，这时候两方都会维护关系，保存对象的时候不可避免地会发送多余的update语句。     
+`Banner.java`
+```java
+public class Banner extends BaseEntity {
+    @Id
+    private Long id;
+    private String name;
+    private String description;
+    private String title;
+    private String img;
+
+    @OneToMany(mappedBy = "banner", fetch = FetchType.LAZY)
+    // @JoinColumn(name = "bannerId")
+    private List<BannerItem> items;
+}
+```
+`BannerItem.java`
+```java
+public class BannerItem extends BaseEntity {
+    @Id
+    private Long id;
+    private String img;
+    private String keyword;
+    private short type;
+    // private Long bannerId;
+    private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "bannerId")
+    private Banner banner;
+}
+```
+
+2. 多对多关系。  
+两个都需要加上注解@ManyToMany，关系维护方添加@JoinTable注解，里面指明joinColumns和inverseJoinColumns。关系被维护方加入mappedBy。    
+`Theme.java`
+```java
+@Entity
+public class Theme extends BaseEntity {
+    @Id
+    private Long id;
+    private String title;
+    private String description;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "theme_spc",joinColumns = @JoinColumn(name = "theme_id"),
+                inverseJoinColumns = @JoinColumn(name = "spu_id"))
+    private List<Spu> spuList;
+}
+```
+`Spu.java`     
+```java
+@Entity
+public class Spu extends BaseEntity {
+    @Id
+    private Long id;
+    private String title;
+    private String subtitle;
+
+    @ManyToMany(mappedBy = "spuList")
+    private List<Theme> themeList;
+}
+```
+
+### 参考文档   
+* [双向一对多关联关系](https://www.cnblogs.com/lj95801/p/5008519.html)    
+* [JPA实体关系映射：@ManyToMany多对多关系、@OneToMany@ManyToOne一对多多对一关系和@OneToOne的深度实例解析。](https://www.jianshu.com/p/54108abb070f)                          
+
+### 配置文件
+1. 在resources目录下面新建`application-xxx.properties/yml`文件，命名以`application`开头，`-`后面命名可以自定义。      
+2. 项目启动时，`application.properties/yml`会被读取，而`application-xxx.properties/yml`可以在`application.properties/yml`中指定。      
+```yml
+spring:
+  profiles:
+    active: xxx
+```
+
+## ORM的概念与思想
+全称：Object Relation Mapping，对象关系映射。      
+功能：数据库的作用在于存储数据和表示关系，数据库的存储方法可以用面向对象的思维来实现。    
+数据库的组成：数据表，记录，字段。              
+面向对象对应：类，对象，属性/成员变量。       
+
+### 利用数据库表快速生成类
+1. 利用IDEA的Database连接。
+2. 打开IDEA → File → Project Structure → 项目右键Add → Persistence
+   View  → Tool Windows → Persistence
+3. 选择要生成的表进行导入即可。
+
+### 实体类
+1. 实体类要加上注解`@Entity`。      
+2. 利用lombok的注解`@Getter`，`@Setter`省略Getter和Setter的书写。    
+3. 类的主键要加上`@Id`注解。      
+4. 提取基类时，基类要加上`@MappedSuperClass`注解，否则，在数据库查询时会出错。     
+   * 通过注解@JsonIgnore不再将字段序列化传到前端。    
+示例：
+BaseEntity.java
+```java
+@Getter
+@Setter
+@MappedSuperclass
+public abstract class BaseEntity {
+    @JsonIgnore
+    private Date createTime;
+    @JsonIgnore
+    private Date updateTime;
+    @JsonIgnore
+    private Date deleteTime;
+}
+```
+Banner.java
+```java
+@Entity
+@Getter
+@Setter
+@Where(clause = "delete_time is null")
+public class Banner extends BaseEntity {
+    @Id
+    private Long id;
+    private String name;
+    private String description;
+    private String title;
+    private String img;
+
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bannerId")
+    private List<BannerItem> items;
+}
+```
+1. 配置jackson返回序列化。              
+   * 返回字段下滑线连接(Snake)。            
+   * 以1970年以来累计时间戳返回。                        
+```java
+spring:
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: true
+```
+
+### 数据库的扩展
+场景：表中的数据字段不够用。      
+理论：表的字段不具备扩展性，但是记录具备扩展性。
+     列不具备扩展性，行可以随意新增。
+操作；可以将列的扩展转化为行的扩展，也就是多加一张表，将其它表的字段以记录的方式进行添加。    
+示例：添加一张config表
+```sql
+id name         value                   table_name
+1  color1       green                    theme
+2  color2       red                      theme
+3  title        chinese lunar new year   banner
+4  description  all half price           theme
+```
+theme表
+```
+id name      img ...      extend
+1  new year  http://xxx.  3&4
+2
+```
+* 实际查询时，通过扩展字段extend找到config表中的记录，得到theme表中新增字段title和description的记录。       
+
 
 ## 快速开发技巧及常见问题
-1. 布置springboot项目热重启。
-   * `dependency`中添加`devtools`
-   * `setting`中`compiler`设置为`build project automatically`    
+1. 布置springboot项目热重启。            
+   * `dependency`中添加`devtools`             
+   * `setting`中`compiler`设置为`build project automatically`     
 
 2. 解决properties文件中乱码的问题    
 `Settings` → `File Encodings` → `Default encoding for properties files:` → 选中`UTF-8` → `Transparent native-to-ascii conversion` → 打对勾    

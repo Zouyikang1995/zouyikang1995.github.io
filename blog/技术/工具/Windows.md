@@ -57,6 +57,7 @@
 1. 查看网络地址： 输入`ipconfig`      
 2. 关机：`shutdown /s`
 3. 重启：`shutdown /r`    
+4. 直接在文件夹下打开终端：使用`Alt+D`快捷键，然后在地址栏中输入`cmd`回车（打开的是cmd.exe）   
 
 
 
