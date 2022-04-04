@@ -681,6 +681,48 @@ spring:
 @OneToMany(fetch = FetchType.LAZY)
 ```
 
+5. 可以通过在entity上面添加@Where注解，来实现对软删除数据的过滤查询。      
+```java
+@Entity
+@Getter
+@Setter
+@Where(clause = "delete_time is null")
+public class Banner extends BaseEntity {
+    ...
+}
+```
+
+### 分类表的常见结构设计
+1. 常规设计：树。
+利用关键字段is_root来标明是否为根节点，然后parent_id来标明上级节点，以此来表达层级关系。
+* 小技巧：在层级较多的情况下，可以通过添加level字段来标明层级，以方便查询。        
+```table
+id   name  is_root  parent_id  level  ...
+1    鞋     true      null     1 
+2    服装   true      null     1
+3    包包   true      null     1
+4    平底鞋 false     1        2
+5    凉鞋   fasle     1        2
+6    衬衫   fasle     2        2
+7    T恤    false     2        2
+... 
+```
+
+2. 路径表示法。
+设计一个path字段，表达该记录的所有路径，类似于 /node1_id/node2_id/node3_id...
+优势在于可以对该记录的任何层级进行查找，解决了常规设计中对节点回溯时需要多次查询数据库的问题，但是存储时会存在一定的数据冗余，同时也需要在java中对路径进行拼接和拆分工作。这种做法在层级目录较多时比较实用。    
+```table
+id   name    path  ...
+1    鞋      /1     
+2    服装    /2    
+3    包包    /3    
+4    平底鞋  /1/4    
+5    凉鞋    /1/5    
+6    衬衫    /2/6    
+7    T恤     /2/7    
+... 
+```
+
 ### Jpa导航关系配置
 1. 双向一对多关系的配置。
    一方：关系被维护端
@@ -749,6 +791,85 @@ public class Spu extends BaseEntity {
 
     @ManyToMany(mappedBy = "spuList")
     private List<Theme> themeList;
+}
+```
+
+### JPA的多种查询规则   
+#### DozerBeanMapper的使用
+1. DozerBeanMapper拷贝属性
+* 首先，在pom.xml中添加以下依赖。
+```java
+<dependency>
+            <groupId>com.github.dozermapper</groupId>
+            <artifactId>dozer-core</artifactId>
+            <version>6.5.0</version>
+        </dependency>
+```
+* 其次，利用DozerBeanMapper可以对List中数据进行深度拷贝。下面代码中，利用mapper实现将Spu深度拷贝至SpuSimplifyVO。          
+```java
+    @GetMapping("/latest")
+    public PagingDozer<Spu, SpuSimplifyVO> getLatestSpuList(@RequestParam(defaultValue = "0") Integer start,
+                                                            @RequestParam(defaultValue = "10") Integer count) {
+        Mapper mapper = DozerBeanMapperBuilder.buildDefault();
+        List<Spu> spuList = this.spuService.getLatestPagingSpu();
+        List<SpuSimplifyVO> vos = new ArrayList();
+        spuList.of(s->{
+            SpuSimplifyVO vo = mapper.map(s, SpuSimplifyVO.class);
+            vos.add(vo);
+        })
+        return vos;
+    }
+```
+
+2. 利用DozerBeanMapper实现对分页数据的精简并拷贝。  
+* 首先，利用Jpa获取Page数据。
+```java
+Pageable page = PageRequest.of(pageNum, size, Sort.by("createTime").descending());
+Page<Spu> spuList = this.spuRepository.findAll(page);
+```
+* 其次，确定一个返回前端的分页对象Paging，为了复用需要引入泛型。    
+```java 
+@Getter
+@Setter
+@NoArgsConstructor
+public class Paging<T> {
+    private Long total;
+    private Integer count;
+    private Integer page;
+    private Integer totalPage;
+    private List<T> items;
+
+    public Paging(Page<T> pageT) {
+        this.initPageParameters(pageT);
+        this.items = pageT.getContent();
+    }
+
+    void initPageParameters(Page<T> pageT) {
+        this.total = pageT.getTotalElements();
+        this.count = pageT.getSize();
+        this.page = pageT.getNumber();
+        this.totalPage = pageT.getTotalPages();
+    }
+}
+```
+* 最后，为了精简Paging里面的List<T> items，需要一个继承Paing的对象。同时，里面实现对items的深度拷贝。      
+```java
+public class PagingDozer<T, K> extends Paging {
+
+    @SuppressWarnings("unchecked")
+    public PagingDozer(Page<T> pageT, Class<K> classK) {
+        this.initPageParameters(pageT);
+
+        List<T> tList = pageT.getContent();
+        Mapper mapper = DozerBeanMapperBuilder.buildDefault();
+        List<K> voList = new ArrayList<>();
+
+        tList.forEach(t -> {
+            K vo = mapper.map(t, classK);
+            voList.add(vo);
+        });
+        this.setItems(voList);
+    }
 }
 ```
 
@@ -849,6 +970,279 @@ id name      img ...      extend
 ```
 * 实际查询时，通过扩展字段extend找到config表中的记录，得到theme表中新增字段title和description的记录。       
 
+### 静态资源  
+1. 标准托管方式：单独构建一个服务，nginx
+2. 第三方托管：阿里云OSS，七牛云，码云，又拍云         
+3. SpringBoot的机制可以将html渲染好，再返回到前端；
+    * 添加一个依赖thymeleaf
+    * 把图片放到resource → static文件夹下
+    * 可以直接通过访问 localhost/8080/imgs/xxx.png这个地址来访问图片
+    * 把地址存到“数据表”
+
+### 规格设计Spec
+1. 规格包含规格名和规格值，而规格名与规格值之间并不是一对一的关系。因而规格相关的表需要拆分成两张表。同时，根据常识，例如颜色的规格名下面有多种颜色的规格值，尺寸的规格名下面有多种不同尺寸的规格值。我们可以得知，规格名与规格值之间是一对多的关系。我们需要将规格设计成为规格名spec_key和规格值spec_value两张表。     
+spec_key
+```table
+CREATE TABLE `spec_key` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `unit` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `standard` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```
+* 其中，unit表示规格的单位，例如尺寸的话，单位可能为米或者英尺。standard表示是否为标准单位，标准单位可以在其它商品中进行复用。例如，颜色和尺寸的单位可能在多种商品中都能用到，作为一个标准的单位存在。           
+`spec_value`
+```table
+CREATE TABLE `spec_value` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `spec_id` int(10) unsigned NOT NULL,
+  `extend` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```      
+* 其中，value为规格值，spec_id就是与规格名表相关联的外键。   
+2. 在规格表设计好的前提下来考虑规格表与Spu，Sku的关系。我们可以得到以下结论：
+* Spu是一种商品，具有各种规格，而sku是Spu这种商品各种规格的具体商品，Spu与sku是一对多的关系。
+* 一个Spu就具有一个商品的所有规格名，尽管Spu的规格值不能确定，需要在sku中确定。因此，Spu是与spec_key相关联的，并且是多对多的关系。     
+* 商品sku是有规格值spec_value相关联的，并且是多对多的关系。           
+在此基础上，我们创建Spu与spec_key的关联表spu_key,同时创建sku与spec_value的关联表sku_spec。   
+`spu_key`
+```talbe
+CREATE TABLE `spu_key` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `spu_id` int(10) unsigned NOT NULL,
+  `spec_key_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```
+`sku_spec`
+```table
+CREATE TABLE `sku_spec` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `spu_id` int(10) unsigned NOT NULL,
+  `sku_id` int(10) unsigned NOT NULL,
+  `key_id` int(10) unsigned NOT NULL,
+  `value_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=90 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```
+其中，在sku_spec表中，sku_id和value_id记录了sku和spec_value表的关联关系。而spu_id,key_id为冗余字段，记录了对应的spu,spec_key表的关联关系。以方便数据的查询。     
+
+### Json对象的映射
+上述的spec为了获取方便，需要附在sku商品的specs字段当中。但是spec是一个对象，其中包括spec的key,keyId,value,valueId，因此需要要将spec序列化成json对象存储到spec字段当中，相反，当从数据库中获取spec字段后需要将spec反序列化成spec对象。针对spec的序列化和反序列化，做出来以下尝试：       
+1. 如果spec是一个java对象，可以考虑利用一个Map来表示spec对象的属性和值，这样具有较大的通用性。在需要序列化/反序列化的字段上面加上@Converter的注解，通过Jpa调用自动实现字段的序列化和反序列化。然后，编写一个MapAndJson类实现AttributeConverter接口，实现其中的序列化接口convertToDatabaseColumn和反序列化接口convertToEntityAttribute。                        
+```java
+@Converter
+public class MapAndJson implements AttributeConverter<Map<String, Object>, String> {
+
+    @Autowired
+    private ObjectMapper mapper;
+
+    @Override
+    public String convertToDatabaseColumn(Map<String, Object> map) {
+        try {
+            return mapper.writeValueAsString(map);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new ServerErrorException(9999);
+        }
+    }
+
+    @Override
+    public Map<String, Object> convertToEntityAttribute(String s) {
+        if (null == s) {
+            return null;
+        }
+        try {
+            return mapper.readValue(s, HashMap.class);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new ServerErrorException(9999);
+        }
+    }
+}
+```
+`Sku.java`
+```java
+@Entity
+@Getter
+@Setter
+public class Sku extends BaseEntity {
+    @Id
+    private Long id;
+    @Convert(converter = MapAndJson.class)
+    private String test;
+    ...
+}
+```
+
+2. 如果specs是一个数组类型，里面包含一组java对象，则需要用List<Object>类型。     
+```java
+@Converter
+public class ListAndJson implements AttributeConverter<List<Object>, String> {
+
+    @Autowired
+    private ObjectMapper mapper;
+
+    @Override
+    public String convertToDatabaseColumn(List<Object> objectList) {
+        try {
+            return mapper.writeValueAsString(objectList);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new ServerErrorException(9999);
+        }
+    }
+
+    @Override
+    public List<Object> convertToEntityAttribute(String s) {
+        if (null == s) {
+            return null;
+        }
+        try {
+            List<Object> t = mapper.readValue(s, List.class);
+            return t;
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new ServerErrorException(9999);
+        }
+    }
+}
+```        
+`Sku.java`
+```java
+@Entity
+@Getter
+@Setter
+public class Sku extends BaseEntity {
+    @Id
+    private Long id;
+    @Convert(converter = ListAndJson.class)
+    private List<Object> specs;
+    ...
+}
+```
+
+3. 考虑到利用通用的Map<String, Object>和List<Object>来表达属性，会失去了spec类的特性，不能够内置方法。更好的做好还是针对spec属性设置一个对应的Spec类。然后让属性采用List<Spec>类型，同时为specs属性写一个专用的工具类SpecAndJson.java。               
+`Spce.java`
+```java
+@Getter
+@Setter
+public class Spec {
+    private Long keyId;
+    private String key;
+    private Long valueId;
+    private String value;
+}
+```
+`Sku.java`
+```java
+@Entity
+@Getter
+@Setter
+public class Sku extends BaseEntity {
+    @Id
+    private Long id;
+    @Convert(converter = SpecAndJson.class)
+    private List<Spec> specs;
+    ...
+}
+```           
+4. 但是在3的解决方案中，每次有一个新的类型时需要为其专门书写一个工具类，又失去了1和2方案中的通用灵活性。在此基础上，考虑采用泛型T，同时解决1和2中不能保留类的特性，以及3中不能通用的问题。但是，利用java的泛型需要将泛型类T的classT传入，而在上面的解决方案中，需要利用Jpa的@Convert注解，这种情况下无法将泛型类传入。因此，需要考虑其它的解决方法。我们可以放弃Jap的序列和反序列方法，自己重写Getter和Setter方法。         
+```java
+@Component
+public class GenericAndJson {
+
+    private static ObjectMapper mapper;
+
+    @Autowired
+    public void setMapper(ObjectMapper mapper) {
+        GenericAndJson.mapper = mapper;
+    }
+
+    public static <T> String objectToJson(T o) {
+        try {
+            return GenericAndJson.mapper.writeValueAsString(o);
+        } catch (Exception e) {
+            throw new ServerErrorException(9999);
+        }
+    }
+
+    public static <T> T jsonToList(String s, Class<T> classT) {
+        if (null == s) {
+            return null;
+        }
+        try {
+            T list = GenericAndJson.mapper.readValue(s, classT);
+            return list;
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new ServerErrorException(9999);
+        }
+    }
+
+    public static <T> T jsonToObject(String s, TypeReference<T> tr) {
+        if (null == s) {
+            return null;
+        }
+        try {
+            T o = GenericAndJson.mapper.readValue(s, tr);
+            return o;
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new ServerErrorException(9999);
+        }
+    }
+}
+```
+`Sku.java`        
+```java
+@Entity
+@Getter
+@Setter
+public class Sku extends BaseEntity {
+    @Id
+    private Long id;
+    @Convert(converter = SpecAndJson.class)
+    private List<Spec> specs;
+    public List<Spec> getSpecs() {
+        if (null == this.specs) {
+            return Collections.emptyList();
+        }
+        return GenericAndJson.jsonToObject(this.specs, new TypeReference<List<Spec>>() {
+        });
+    }
+
+    public void setSpecs(String specs) {
+        if (specs.isEmpty()) {
+            return;
+        }
+        this.specs = GenericAndJson.objectToJson(specs);
+    }
+    ...
+}
+``` 
+其中，jsonToList方法用来针对单个类的json对象转化，jsonToObject方法用来转化集合类型的json对象转化。实际上，可以通过传入参数的不同，利用jsonObject方法来实现单个和集合类型的json对象转化，jsonToObject方法并不需要。      
+5. 如果考虑到方法4中的getter方法需要传入TypeReference方法并不方便，可以优化以上代码，针对集合类型的json转化专门写一个方法。将单个类的json对象转化和集合类型的json转化方法分开。               
+```java
+public static <T> List<T> jsonToList(String s) {
+    if (null == s) {
+        return null;
+    }
+    try {
+        List<T> list=GenericAndJson.mapper.readValue(s, new TypeReference<List<T>>(){});
+        return list;
+    } catch (JsonProcessingException e) {
+        e.printStackTrace();
+        throw new ServerErrorException(9999);
+    }
+}
+```                         
+6. 实际测试方案5中，发现反序列化过程中并不能推断出泛型T的类型Spec，在debug模式中看到jsonToList方法反序列化的List<T>，T实际上是HashMap类型。因而与我们预期相违背，我们将采取方案4，且只保留一个objectToJson和一个jsonToObject方法即可。                
+      
 
 ## 快速开发技巧及常见问题
 1. 布置springboot项目热重启。            
