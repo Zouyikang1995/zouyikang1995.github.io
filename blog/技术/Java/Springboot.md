@@ -873,6 +873,138 @@ public class PagingDozer<T, K> extends Paging {
 }
 ```
 
+#### Category及Theme接口
+1. Category接口
+* 仓储层CategoryRepository，通过Jpa的自动推导利用isRoot字段来查询，并且按照index进行排序，传入isRoot参数。   
+```java
+public interface CategoryRepository extends JpaRepository<Category, Long> {
+    List<Category> findAllByIsRootOrderByIndexAsc(Boolean isRoot);
+}
+```
+* Service层根据isRoot分两次调用，查询的两次结果通过Map进行返回。 
+```java
+@Service
+public class CategoryService {
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    public Map<Integer, List<Category>> getAll(){
+        List<Category> roots = categoryRepository.findAllByIsRootOrderByIndexAsc(true);
+        List<Category> subs = categoryRepository.findAllByIsRootOrderByIndexAsc(false);
+
+        Map<Integer, List<Category>> categories = new HashMap<>();
+        categories.put(1, roots);
+        categories.put(2, subs);
+        return categories;
+    }
+}
+```
+* Controller层调用service，将查询结果包装成前端要返回的形式。
+```java
+@RequestMapping("category")
+@RestController
+@ResponseBody
+public class CategoryController {
+
+    @Autowired
+    private CategoryService categoryService;
+
+    @Autowired
+    private GridCategoryService gridCategoryService;
+    
+    @GetMapping("/all")
+    public CategoriesAllVO getAll() {
+        Map<Integer, List<Category>> categories = categoryService.getAll();
+        return new CategoriesAllVO(categories);
+    }
+}
+```
+* 这里将前端需要返回的数据类型包装成CategoriesAllVO，放在VO目录下，同时将Map<Integer, List<Category>>类型转换成CategoriesAllVO的逻辑放在CategoriesAllVO的构造函数内，很大程度上减轻了Controller层的代码复杂度。同时，也提高了CategoriesAllVO的复用性，当在其它地方也需要CategoriesAllVO形式的数据时，可以避免书写同样转化的逻辑。       
+```java
+@Getter
+@Setter
+public class CategoriesAllVO {
+    private List<CategoryPureVO> roots;
+    private List<CategoryPureVO> subs;
+
+    public CategoriesAllVO(Map<Integer, List<Category>> map) {
+        this.roots = map.get(1).stream()
+                .map(CategoryPureVO::new)
+                .collect(Collectors.toList());
+        this.subs = map.get(2).stream()
+                .map(CategoryPureVO::new)
+                .collect(Collectors.toList());
+    }
+}
+```
+2. Theme接口
+* 仓储层ThemeRepository，通过Jpa的注解@Query来编写sql语句，注意这里使用的并不是原生的sql，而是JPQL，它是通过直接操作java中的类来进行数据库的操作。如果需要写原生的sql，需要标注nativeQuery=true。并且，需要的参数通过List来传入，与sql语句中的(:names)进行对应。      
+```java
+public interface ThemeRepository extends JpaRepository<Theme, Long> {
+    @Query("select t from Theme t where t.name in (:names)")
+    List<Theme> findByNames(@Param("names") List<String> names);
+
+    Optional<Theme> findByName(String name);
+}
+```
+* Service层ThemeService，直接调用仓储层。  
+```java
+@Service
+public class ThemeService {
+    @Autowired
+    private ThemeRepository themeRepository;
+
+    public List<Theme> findByNames(List<String> names) {
+        return themeRepository.findByNames(names);
+    }
+
+    public Optional<Theme> findByName(String name) {
+        return themeRepository.findByName(name);
+    }
+}
+
+```
+* Controller层调用service，将查询到的结果进行转化，并返回到前端。转换的逻辑也可以写在Controller层。     
+```java
+@RestController
+@RequestMapping("theme")
+@Validated
+public class ThemeController {
+    @Autowired
+    private ThemeService themeService;
+
+    @GetMapping("/by/names")
+    public List<ThemePureVO> getThemeGroupByNames(@RequestParam(name = "names") String names) {
+        List<String> nameList = Arrays.asList(names.split(","));
+        List<Theme> themes = themeService.findByNames(nameList);
+        List<ThemePureVO> list = new ArrayList<>();
+        themes.forEach(theme -> {
+            Mapper mapper = DozerBeanMapperBuilder.buildDefault();
+            ThemePureVO vo = mapper.map(theme, ThemePureVO.class);
+            list.add(vo);
+        });
+        return list;
+    }
+}
+```
+
+#### Optional
+1. Optional的意义：
+* 可以用来简化代码，让代码变得更简介。      
+* 强制让我们考虑判空，通过返回值类型让我们意识到结果有可能为空值。        
+2. optional中常用的操作
+* orElseThrow
+```java
+optionalTheme.orElseThrow(() -> new NotFoundException(30003));
+```
+* ifPresent
+```java
+Optional.ofNullable("a").ifPresent(System.out::println);
+```
+* filter
+* map
+* 转化成stream
+
 ### 参考文档   
 * [双向一对多关联关系](https://www.cnblogs.com/lj95801/p/5008519.html)    
 * [JPA实体关系映射：@ManyToMany多对多关系、@OneToMany@ManyToOne一对多多对一关系和@OneToOne的深度实例解析。](https://www.jianshu.com/p/54108abb070f)                          
