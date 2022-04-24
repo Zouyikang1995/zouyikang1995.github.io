@@ -797,15 +797,15 @@ public class Spu extends BaseEntity {
 ### JPA的多种查询规则   
 #### DozerBeanMapper的使用
 1. DozerBeanMapper拷贝属性
-* 首先，在pom.xml中添加以下依赖。
+   * 首先，在pom.xml中添加以下依赖。
 ```java
 <dependency>
-            <groupId>com.github.dozermapper</groupId>
-            <artifactId>dozer-core</artifactId>
-            <version>6.5.0</version>
-        </dependency>
+    <groupId>com.github.dozermapper</groupId>
+    <artifactId>dozer-core</artifactId>
+    <version>6.5.0</version>
+</dependency>
 ```
-* 其次，利用DozerBeanMapper可以对List中数据进行深度拷贝。下面代码中，利用mapper实现将Spu深度拷贝至SpuSimplifyVO。          
+   * 其次，利用DozerBeanMapper可以对List中数据进行深度拷贝。下面代码中，利用mapper实现将Spu深度拷贝至SpuSimplifyVO。          
 ```java
     @GetMapping("/latest")
     public PagingDozer<Spu, SpuSimplifyVO> getLatestSpuList(@RequestParam(defaultValue = "0") Integer start,
@@ -822,12 +822,13 @@ public class Spu extends BaseEntity {
 ```
 
 2. 利用DozerBeanMapper实现对分页数据的精简并拷贝。  
-* 首先，利用Jpa获取Page数据。
+   * 首先，利用Jpa获取Page数据。
 ```java
 Pageable page = PageRequest.of(pageNum, size, Sort.by("createTime").descending());
 Page<Spu> spuList = this.spuRepository.findAll(page);
 ```
-* 其次，确定一个返回前端的分页对象Paging，为了复用需要引入泛型。    
+
+   * 其次，确定一个返回前端的分页对象Paging，为了复用需要引入泛型。    
 ```java 
 @Getter
 @Setter
@@ -852,7 +853,8 @@ public class Paging<T> {
     }
 }
 ```
-* 最后，为了精简Paging里面的List<T> items，需要一个继承Paing的对象。同时，里面实现对items的深度拷贝。      
+
+   * 最后，为了精简Paging里面的List<T> items，需要一个继承Paing的对象。同时，里面实现对items的深度拷贝。      
 ```java
 public class PagingDozer<T, K> extends Paging {
 
@@ -875,13 +877,14 @@ public class PagingDozer<T, K> extends Paging {
 
 #### Category及Theme接口
 1. Category接口
-* 仓储层CategoryRepository，通过Jpa的自动推导利用isRoot字段来查询，并且按照index进行排序，传入isRoot参数。   
+   * 仓储层CategoryRepository，通过Jpa的自动推导利用isRoot字段来查询，并且按照index进行排序，传入isRoot参数。   
 ```java
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllByIsRootOrderByIndexAsc(Boolean isRoot);
 }
 ```
-* Service层根据isRoot分两次调用，查询的两次结果通过Map进行返回。 
+
+   * Service层根据isRoot分两次调用，查询的两次结果通过Map进行返回。 
 ```java
 @Service
 public class CategoryService {
@@ -899,7 +902,8 @@ public class CategoryService {
     }
 }
 ```
-* Controller层调用service，将查询结果包装成前端要返回的形式。
+
+   * Controller层调用service，将查询结果包装成前端要返回的形式。
 ```java
 @RequestMapping("category")
 @RestController
@@ -919,7 +923,7 @@ public class CategoryController {
     }
 }
 ```
-* 这里将前端需要返回的数据类型包装成CategoriesAllVO，放在VO目录下，同时将Map<Integer, List<Category>>类型转换成CategoriesAllVO的逻辑放在CategoriesAllVO的构造函数内，很大程度上减轻了Controller层的代码复杂度。同时，也提高了CategoriesAllVO的复用性，当在其它地方也需要CategoriesAllVO形式的数据时，可以避免书写同样转化的逻辑。       
+   * 这里将前端需要返回的数据类型包装成CategoriesAllVO，放在VO目录下，同时将Map<Integer, List<Category>>类型转换成CategoriesAllVO的逻辑放在CategoriesAllVO的构造函数内，很大程度上减轻了Controller层的代码复杂度。同时，也提高了CategoriesAllVO的复用性，当在其它地方也需要CategoriesAllVO形式的数据时，可以避免书写同样转化的逻辑。       
 ```java
 @Getter
 @Setter
@@ -937,8 +941,9 @@ public class CategoriesAllVO {
     }
 }
 ```
+
 2. Theme接口
-* 仓储层ThemeRepository，通过Jpa的注解@Query来编写sql语句，注意这里使用的并不是原生的sql，而是JPQL，它是通过直接操作java中的类来进行数据库的操作。如果需要写原生的sql，需要标注nativeQuery=true。并且，需要的参数通过List来传入，与sql语句中的(:names)进行对应。      
+   * 仓储层ThemeRepository，通过Jpa的注解@Query来编写sql语句，注意这里使用的并不是原生的sql，而是JPQL，它是通过直接操作java中的类来进行数据库的操作。如果需要写原生的sql，需要标注nativeQuery=true。并且，需要的参数通过List来传入，与sql语句中的(:names)进行对应。      
 ```java
 public interface ThemeRepository extends JpaRepository<Theme, Long> {
     @Query("select t from Theme t where t.name in (:names)")
@@ -947,7 +952,8 @@ public interface ThemeRepository extends JpaRepository<Theme, Long> {
     Optional<Theme> findByName(String name);
 }
 ```
-* Service层ThemeService，直接调用仓储层。  
+
+   * Service层ThemeService，直接调用仓储层。  
 ```java
 @Service
 public class ThemeService {
@@ -962,9 +968,9 @@ public class ThemeService {
         return themeRepository.findByName(name);
     }
 }
-
 ```
-* Controller层调用service，将查询到的结果进行转化，并返回到前端。转换的逻辑也可以写在Controller层。     
+
+   * Controller层调用service，将查询到的结果进行转化，并返回到前端。转换的逻辑也可以写在Controller层。     
 ```java
 @RestController
 @RequestMapping("theme")
@@ -990,24 +996,24 @@ public class ThemeController {
 
 #### Optional
 1. Optional的意义：
-* 可以用来简化代码，让代码变得更简介。      
-* 强制让我们考虑判空，通过返回值类型让我们意识到结果有可能为空值。        
+   * 可以用来简化代码，让代码变得更简介。      
+   * 强制让我们考虑判空，通过返回值类型让我们意识到结果有可能为空值。        
 2. optional中常用的操作
-* orElseThrow
+   * orElseThrow
 ```java
 optionalTheme.orElseThrow(() -> new NotFoundException(30003));
 ```
-* ifPresent
+   * ifPresent
 ```java
 Optional.ofNullable("a").ifPresent(System.out::println);
 ```
-* filter
-* map
-* 转化成stream
+   * filter
+   * map
+   * 转化成stream
 
 ### 参考文档   
-* [双向一对多关联关系](https://www.cnblogs.com/lj95801/p/5008519.html)    
-* [JPA实体关系映射：@ManyToMany多对多关系、@OneToMany@ManyToOne一对多多对一关系和@OneToOne的深度实例解析。](https://www.jianshu.com/p/54108abb070f)                          
+   * [双向一对多关联关系](https://www.cnblogs.com/lj95801/p/5008519.html)    
+   * [JPA实体关系映射：@ManyToMany多对多关系、@OneToMany@ManyToOne一对多多对一关系和@OneToOne的深度实例解析。](https://www.jianshu.com/p/54108abb070f)                          
 
 ### 配置文件
 1. 在resources目录下面新建`application-xxx.properties/yml`文件，命名以`application`开头，`-`后面命名可以自定义。      
@@ -1070,7 +1076,7 @@ public class Banner extends BaseEntity {
     private List<BannerItem> items;
 }
 ```
-1. 配置jackson返回序列化。              
+5. 配置jackson返回序列化。              
    * 返回字段下滑线连接(Snake)。            
    * 以1970年以来累计时间戳返回。                        
 ```java
@@ -1094,8 +1100,9 @@ id name         value                   table_name
 3  title        chinese lunar new year   banner
 4  description  all half price           theme
 ```
+
 theme表
-```
+```sql
 id name      img ...      extend
 1  new year  http://xxx.  3&4
 2
@@ -1114,7 +1121,7 @@ id name      img ...      extend
 ### 规格设计Spec
 1. 规格包含规格名和规格值，而规格名与规格值之间并不是一对一的关系。因而规格相关的表需要拆分成两张表。同时，根据常识，例如颜色的规格名下面有多种颜色的规格值，尺寸的规格名下面有多种不同尺寸的规格值。我们可以得知，规格名与规格值之间是一对多的关系。我们需要将规格设计成为规格名spec_key和规格值spec_value两张表。     
 spec_key
-```table
+```sql
 CREATE TABLE `spec_key` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -1124,9 +1131,9 @@ CREATE TABLE `spec_key` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 ```
-* 其中，unit表示规格的单位，例如尺寸的话，单位可能为米或者英尺。standard表示是否为标准单位，标准单位可以在其它商品中进行复用。例如，颜色和尺寸的单位可能在多种商品中都能用到，作为一个标准的单位存在。           
-`spec_value`
-```table
+   * 其中，unit表示规格的单位，例如尺寸的话，单位可能为米或者英尺。standard表示是否为标准单位，标准单位可以在其它商品中进行复用。例如，颜色和尺寸的单位可能在多种商品中都能用到，作为一个标准的单位存在。           
+spec_value    
+```sql
 CREATE TABLE `spec_value` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -1135,14 +1142,15 @@ CREATE TABLE `spec_value` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 ```      
-* 其中，value为规格值，spec_id就是与规格名表相关联的外键。   
+   * 其中，value为规格值，spec_id就是与规格名表相关联的外键。   
 2. 在规格表设计好的前提下来考虑规格表与Spu，Sku的关系。我们可以得到以下结论：
-* Spu是一种商品，具有各种规格，而sku是Spu这种商品各种规格的具体商品，Spu与sku是一对多的关系。
-* 一个Spu就具有一个商品的所有规格名，尽管Spu的规格值不能确定，需要在sku中确定。因此，Spu是与spec_key相关联的，并且是多对多的关系。     
-* 商品sku是有规格值spec_value相关联的，并且是多对多的关系。           
+   * Spu是一种商品，具有各种规格，而sku是Spu这种商品各种规格的具体商品，Spu与sku是一对多的关系。
+   * 一个Spu就具有一个商品的所有规格名，尽管Spu的规格值不能确定，需要在sku中确定。因此，Spu是与spec_key相关联的，并且是多对多的关系。     
+   * 商品sku是有规格值spec_value相关联的，并且是多对多的关系。           
 在此基础上，我们创建Spu与spec_key的关联表spu_key,同时创建sku与spec_value的关联表sku_spec。   
-`spu_key`
-```talbe
+
+spu_key
+```sql
 CREATE TABLE `spu_key` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `spu_id` int(10) unsigned NOT NULL,
@@ -1150,8 +1158,8 @@ CREATE TABLE `spu_key` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 ```
-`sku_spec`
-```table
+sku_spec
+```sql
 CREATE TABLE `sku_spec` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `spu_id` int(10) unsigned NOT NULL,
@@ -1161,6 +1169,7 @@ CREATE TABLE `sku_spec` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=90 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 ```
+
 其中，在sku_spec表中，sku_id和value_id记录了sku和spec_value表的关联关系。而spu_id,key_id为冗余字段，记录了对应的spu,spec_key表的关联关系。以方便数据的查询。     
 
 ### Json对象的映射
@@ -1197,7 +1206,8 @@ public class MapAndJson implements AttributeConverter<Map<String, Object>, Strin
     }
 }
 ```
-`Sku.java`
+
+Sku.java
 ```java
 @Entity
 @Getter
@@ -1243,8 +1253,9 @@ public class ListAndJson implements AttributeConverter<List<Object>, String> {
         }
     }
 }
-```        
-`Sku.java`
+```
+
+Sku.java
 ```java
 @Entity
 @Getter
@@ -1259,7 +1270,7 @@ public class Sku extends BaseEntity {
 ```
 
 3. 考虑到利用通用的Map<String, Object>和List<Object>来表达属性，会失去了spec类的特性，不能够内置方法。更好的做好还是针对spec属性设置一个对应的Spec类。然后让属性采用List<Spec>类型，同时为specs属性写一个专用的工具类SpecAndJson.java。               
-`Spce.java`
+Spce.java
 ```java
 @Getter
 @Setter
@@ -1270,7 +1281,8 @@ public class Spec {
     private String value;
 }
 ```
-`Sku.java`
+
+Sku.java
 ```java
 @Entity
 @Getter
@@ -1330,7 +1342,8 @@ public class GenericAndJson {
     }
 }
 ```
-`Sku.java`        
+
+Sku.java       
 ```java
 @Entity
 @Getter
