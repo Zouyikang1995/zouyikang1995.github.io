@@ -1174,7 +1174,8 @@ CREATE TABLE `sku_spec` (
 
 ### Json对象的映射
 上述的spec为了获取方便，需要附在sku商品的specs字段当中。但是spec是一个对象，其中包括spec的key,keyId,value,valueId，因此需要要将spec序列化成json对象存储到spec字段当中，相反，当从数据库中获取spec字段后需要将spec反序列化成spec对象。针对spec的序列化和反序列化，做出来以下尝试：       
-1. 如果spec是一个java对象，可以考虑利用一个Map来表示spec对象的属性和值，这样具有较大的通用性。在需要序列化/反序列化的字段上面加上@Converter的注解，通过Jpa调用自动实现字段的序列化和反序列化。然后，编写一个MapAndJson类实现AttributeConverter接口，实现其中的序列化接口convertToDatabaseColumn和反序列化接口convertToEntityAttribute。                        
+1. 如果spec是一个java对象，可以考虑利用一个Map来表示spec对象的属性和值，这样具有较大的通用性。在需要序列化/反序列化的字段上面加上@Converter的注解，通过Jpa调用自动实现字段的序列化和反序列化。然后，编写一个MapAndJson类实现AttributeConverter接口，实现其中的序列化接口convertToDatabaseColumn和反序列化接口convertToEntityAttribute。    
+                      
 ```java
 @Converter
 public class MapAndJson implements AttributeConverter<Map<String, Object>, String> {
@@ -1208,6 +1209,7 @@ public class MapAndJson implements AttributeConverter<Map<String, Object>, Strin
 ```
 
 Sku.java
+
 ```java
 @Entity
 @Getter
@@ -1221,7 +1223,8 @@ public class Sku extends BaseEntity {
 }
 ```
 
-2. 如果specs是一个数组类型，里面包含一组java对象，则需要用List<Object>类型。     
+2. 如果specs是一个数组类型，里面包含一组java对象，则需要用List<Object>类型。    
+ 
 ```java
 @Converter
 public class ListAndJson implements AttributeConverter<List<Object>, String> {
@@ -1256,6 +1259,7 @@ public class ListAndJson implements AttributeConverter<List<Object>, String> {
 ```
 
 Sku.java
+
 ```java
 @Entity
 @Getter
@@ -1269,8 +1273,10 @@ public class Sku extends BaseEntity {
 }
 ```
 
-3. 考虑到利用通用的Map<String, Object>和List<Object>来表达属性，会失去了spec类的特性，不能够内置方法。更好的做好还是针对spec属性设置一个对应的Spec类。然后让属性采用List<Spec>类型，同时为specs属性写一个专用的工具类SpecAndJson.java。               
+3. 考虑到利用通用的Map<String, Object>和List<Object>来表达属性，会失去了spec类的特性，不能够内置方法。更好的做好还是针对spec属性设置一个对应的Spec类。然后让属性采用List<Spec>类型，同时为specs属性写一个专用的工具类SpecAndJson.java。           
+    
 Spce.java
+
 ```java
 @Getter
 @Setter
@@ -1283,6 +1289,7 @@ public class Spec {
 ```
 
 Sku.java
+
 ```java
 @Entity
 @Getter
@@ -1294,8 +1301,10 @@ public class Sku extends BaseEntity {
     private List<Spec> specs;
     ...
 }
-```           
-4. 但是在3的解决方案中，每次有一个新的类型时需要为其专门书写一个工具类，又失去了1和2方案中的通用灵活性。在此基础上，考虑采用泛型T，同时解决1和2中不能保留类的特性，以及3中不能通用的问题。但是，利用java的泛型需要将泛型类T的classT传入，而在上面的解决方案中，需要利用Jpa的@Convert注解，这种情况下无法将泛型类传入。因此，需要考虑其它的解决方法。我们可以放弃Jap的序列和反序列方法，自己重写Getter和Setter方法。         
+```         
+
+4. 但是在3的解决方案中，每次有一个新的类型时需要为其专门书写一个工具类，又失去了1和2方案中的通用灵活性。在此基础上，考虑采用泛型T，同时解决1和2中不能保留类的特性，以及3中不能通用的问题。但是，利用java的泛型需要将泛型类T的classT传入，而在上面的解决方案中，需要利用Jpa的@Convert注解，这种情况下无法将泛型类传入。因此，需要考虑其它的解决方法。我们可以放弃Jap的序列和反序列方法，自己重写Getter和Setter方法。     
+    
 ```java
 @Component
 public class GenericAndJson {
@@ -1343,7 +1352,8 @@ public class GenericAndJson {
 }
 ```
 
-Sku.java       
+Sku.java   
+
 ```java
 @Entity
 @Getter
@@ -1370,8 +1380,11 @@ public class Sku extends BaseEntity {
     ...
 }
 ``` 
+
 其中，jsonToList方法用来针对单个类的json对象转化，jsonToObject方法用来转化集合类型的json对象转化。实际上，可以通过传入参数的不同，利用jsonObject方法来实现单个和集合类型的json对象转化，jsonToObject方法并不需要。      
-5. 如果考虑到方法4中的getter方法需要传入TypeReference方法并不方便，可以优化以上代码，针对集合类型的json转化专门写一个方法。将单个类的json对象转化和集合类型的json转化方法分开。               
+
+5. 如果考虑到方法4中的getter方法需要传入TypeReference方法并不方便，可以优化以上代码，针对集合类型的json转化专门写一个方法。将单个类的json对象转化和集合类型的json转化方法分开。        
+       
 ```java
 public static <T> List<T> jsonToList(String s) {
     if (null == s) {
@@ -1385,7 +1398,8 @@ public static <T> List<T> jsonToList(String s) {
         throw new ServerErrorException(9999);
     }
 }
-```                         
+```             
+
 6. 实际测试方案5中，发现反序列化过程中并不能推断出泛型T的类型Spec，在debug模式中看到jsonToList方法反序列化的List<T>，T实际上是HashMap类型。因而与我们预期相违背，我们将采取方案4，且只保留一个objectToJson和一个jsonToObject方法即可。                
       
 ## 令牌与权限    
@@ -1421,8 +1435,10 @@ public static <T> List<T> jsonToList(String s) {
 2. filter是基于servlet，而servlet是web的一种标准接口。interceptor和aop是基于spring。          
 3. 拦截顺序：request -> filter -> interceptor -> aop -> controller -> aop -> interceptor -> response
 4. SpringBoot中Interceptor的实现方法：实现`implement HandlerInterceptor`或者继承`extend HandlerInterceptorAdapter`。     
-   对应的配置类实现`implements WebMvcConfigurer`并重写`addInceptors()`方法。  
+   对应的配置类实现`implements WebMvcConfigurer`并重写`addInceptors()`方法。 
+
 PermissionInterceptor.java
+
 ```java
 public class PermissionInterceptor extends HandlerInterceptorAdapter {
     public PermissionInterceptor() {
@@ -1445,7 +1461,9 @@ public class PermissionInterceptor extends HandlerInterceptorAdapter {
     }
 }
 ```
+
 InterceptorConfiguration.java
+
 ```java
 public class InterceptorConfiguration implements WebMvcConfigurer {
     @Override
@@ -1454,6 +1472,7 @@ public class InterceptorConfiguration implements WebMvcConfigurer {
     }
 }
 ```
+
 5. jwt拦截器逻辑：
    * 获取到请求里的token
    * 验证token
