@@ -1375,6 +1375,78 @@ public static <T> List<T> jsonToList(String s) {
 ```                         
 6. 实际测试方案5中，发现反序列化过程中并不能推断出泛型T的类型Spec，在debug模式中看到jsonToList方法反序列化的List<T>，T实际上是HashMap类型。因而与我们预期相违背，我们将采取方案4，且只保留一个objectToJson和一个jsonToObject方法即可。                
       
+## 令牌与权限  
+### 权限、分组与用户     
+1. 权限：是否能够访问API。 
+2. 分组、用户、权限之间的关系：
+   * 用户不和权限有关系。    
+   * 分组才和权限有关系。      
+   * 用户必须属于一个分组。     
+3. 用户登录是访问有权限API的前提，否则只能访问公开的API。
+
+### 用户登录
+1. 传统登录方式：输入账号、密码。           
+2. 微信登录的特点：静默登录，不需要输入账号和密码。
+   微信已经帮忙验证账号密码，相当于第三方登录。 
+   原理：code -> API -> 微信服务器     
+3. 用户票据：
+   传统方式：写入Cookie
+   微信、Vue、App、小程序：令牌JWT（保存uid的额外信息，具有时效性）     
+
+### 无感知二次登录
+1. 原则：再次输入账号密码，比如设置JWT有效期为7天。      
+2. 传统网站上实现需要双令牌机制，access_token和refresh_token。           
+3. 微信小程序jwt生成流程：
+   * 利用微信小程序产生的code码访问微信接口，获取用户的openid。    
+   * 利用openid在数据库中获取用户的uid。
+   * 若openid存在于数据库中，则直接查询uid，相当于登录。若openid不存在于数据库中，则写入到数据库中，相当于注册。    
+   * 将获得的uid写入到jwt中，然后将jwt返回到小程序。    
+
+### 拦截
+1. 拦截方法：filter、interceptor、aop。            
+2. filter是基于servlet，而servlet是web的一种标准接口。interceptor和aop是基于spring。          
+3. 拦截顺序：request -> filter -> interceptor -> aop -> controller -> aop -> interceptor -> response
+4. SpringBoot中Interceptor的实现方法：实现`implement HandlerInterceptor`或者继承`extend HandlerInterceptorAdapter`。     
+   对应的配置类实现`implements WebMvcConfigurer`并重写`addInceptors()`方法。  
+PermissionInterceptor.java
+```java
+public class PermissionInterceptor extends HandlerInterceptorAdapter {
+    public PermissionInterceptor() {
+        super();
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        return super.preHandle(request, response, handler);
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        super.postHandle(request, response, handler, modelAndView);
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        super.afterCompletion(request, response, handler, ex);
+    }
+}
+```
+InterceptorConfiguration.java
+```java
+public class InterceptorConfiguration implements WebMvcConfigurer {
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new PermissionInterceptor());
+    }
+}
+```
+5. jwt拦截器逻辑：
+   * 获取到请求里的token
+   * 验证token
+   * 验证通过后对于公开的api放行，对于非公开api获取token中的scope
+   * 读取API中@ScopeLevel中的level
+   * 比较scope与level的大小，从而判断jwt权限判断是否通过    
+
 
 ## 快速开发技巧及常见问题
 1. 布置springboot项目热重启。            
